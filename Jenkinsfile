@@ -25,10 +25,26 @@ pipeline {
             }
         }
 
+        stage('Backend Security Audit') {
+            steps {
+                dir('backend') {
+                    sh 'npm audit --audit-level=high || true'
+                }
+            }
+        }
+
         stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
                     sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Frontend Security Audit') {
+            steps {
+                dir('frontend') {
+                    sh 'npm audit --audit-level=high || true'
                 }
             }
         }
