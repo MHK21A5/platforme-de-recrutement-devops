@@ -1,0 +1,51 @@
+@startuml seq2_offres_et_candidature
+' Diagramme de séquence - Publier une offre & postuler (avec notification temps réel)
+title Diagramme de séquence — Publication d'offre & Candidature
+
+skinparam shadowing false
+skinparam participant {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+}
+skinparam actorStyle awesome
+
+actor "Recruteur" as R
+actor "Candidat" as C
+participant "Application Web\n(React)" as Web
+participant "API REST\n(Express)" as API
+participant "Serveur Socket.IO" as WS
+database "MongoDB" as DB
+
+== Publication d'une offre ==
+R -> Web : Remplir et publier une offre
+Web -> API : POST /api/jobs { title, position, requiredSkills, ... }
+API -> DB : create Job(status = "open")
+DB --> API : offre créée
+API -> WS : emit("job:new") vers room "role-candidate"
+WS --> Web : job:new (rafraîchissement auto de la liste)
+API --> Web : 201 offre publiée
+
+== Consultation & candidature ==
+C -> Web : Ouvrir "Offres disponibles"
+Web -> API : GET /api/applications/jobs/open
+API -> DB : find({ status: "open" }) + countDocuments
+API -> DB : find applications du candidat (alreadyApplied)
+DB --> API : offres + indicateur "déjà postulé"
+API --> Web : 200 liste des offres
+C -> Web : Rechercher / filtrer (recherche dynamique côté client)
+C -> Web : Cliquer "Postuler"
+Web -> API : POST /api/applications/apply/:jobId
+API -> DB : create Application(status = "pending")
+DB --> API : candidature créée
+
+group Notification temps réel du recruteur
+  API -> WS : emit("application:new") vers room "user-<recruteur>"
+  API -> DB : create Notification(type = "application_new")
+  API -> WS : emit("notification:new") vers room "user-<recruteur>"
+  WS --> Web : notification:new + application:new (recruteur)
+end
+
+API --> Web : 201 candidature envoyée
+Web --> C : Toast "Candidature envoyée" + bouton "Postulé"
+
+@enduml

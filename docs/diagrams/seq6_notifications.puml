@@ -1,0 +1,51 @@
+@startuml seq6_notifications
+' Diagramme de séquence - Système de notifications temps réel
+title Diagramme de séquence — Notifications temps réel
+
+skinparam shadowing false
+skinparam participant {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+}
+skinparam actorStyle awesome
+
+actor "Acteur déclencheur\n(candidat / recruteur)" as Trigger
+actor "Destinataire" as Dest
+participant "API REST\n(Express)" as API
+participant "notificationService" as SVC
+participant "Serveur Socket.IO" as WS
+database "MongoDB" as DB
+participant "Front du destinataire\n(NotificationContext)" as Front
+
+== Émission d'une notification ==
+Trigger -> API : Action métier\n(postuler / planifier entretien / clôturer quiz)
+API -> SVC : createNotification({ recipient, type, title, message, link })
+SVC -> DB : create Notification(read = false)
+DB --> SVC : notification enregistrée
+SVC -> WS : getIO().emit("notification:new")\nvers room "user-<recipient>"
+API -> WS : emit événement liste\n(application:new / interview:new / interview:updated)
+
+== Réception temps réel ==
+WS --> Front : notification:new
+Front -> Front : prepend liste, unreadCount++, toast.info()
+WS --> Front : événement liste
+Front -> API : refetch (fetchApplications / fetchInterviews...)
+Front --> Dest : Cloche mise à jour (badge) + toast + liste rafraîchie
+
+== Chargement initial (à la connexion) ==
+Front -> API : GET /api/notifications
+API -> DB : find({ recipient }).sort(-createdAt).limit(50)\n+ countDocuments({ read:false })
+DB --> API : notifications + nombre de non-lus
+API --> Front : 200 { notifications, unreadCount }
+
+== Consultation & lecture ==
+Dest -> Front : Ouvrir la cloche
+Dest -> Front : Cliquer une notification
+Front -> API : PATCH /api/notifications/:id/read
+API -> DB : update read = true
+Front -> Front : navigate(link)
+Dest -> Front : "Tout marquer comme lu"
+Front -> API : PATCH /api/notifications/read-all
+API -> DB : updateMany(read = true)
+
+@enduml

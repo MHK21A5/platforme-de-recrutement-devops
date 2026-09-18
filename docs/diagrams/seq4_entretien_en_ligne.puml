@@ -1,0 +1,64 @@
+@startuml seq4_entretien_en_ligne
+' Diagramme de séquence - Entretien en ligne (temps réel : chat + visioconférence WebRTC)
+title Diagramme de séquence — Entretien en ligne (temps réel)
+
+skinparam shadowing false
+skinparam participant {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+}
+skinparam actorStyle awesome
+
+actor "Recruteur" as R
+actor "Candidat" as C
+participant "API REST\n(Express)" as API
+participant "Serveur Socket.IO" as WS
+database "MongoDB" as DB
+
+== Planification de l'entretien ==
+R -> API : POST /api/interviews { title, job, candidate, scheduledAt }
+API -> DB : create Interview(status = "pending")
+DB --> API : entretien créé
+API -> WS : emit("interview:new") vers "user-<candidat>"
+API -> DB : create Notification(type = "interview_scheduled")
+API -> API : sendInterviewInvitation() (email, non bloquant)
+API --> R : 201 entretien planifié (+ emailSent)
+
+== Déroulement (temps réel) ==
+R -> WS : connect (JWT) + join-room({ interviewId })
+WS -> WS : jwt.verify(token) + join "user-<id>", "role-<role>"
+WS --> R : message-history + presence-update
+C -> WS : connect (JWT) + join-room
+WS --> R : user-joined (candidat)
+WS -> WS : recruteur + candidat présents ?
+WS -> DB : Interview.status = "ongoing"
+WS --> R : interview-status-updated("ongoing")
+WS --> C : interview-status-updated("ongoing")
+
+group Surveillance d'onglet (anti-triche)
+  C -> WS : candidate-tab-hidden / candidate-tab-visible
+  WS --> R : alerte changement d'onglet
+end
+
+group Chat temps réel
+  C -> WS : send-message({ text })
+  WS --> R : message
+  WS --> C : message
+end
+
+group Visioconférence (WebRTC — signalisation via Socket.IO)
+  R -> WS : webrtc-call-request
+  WS --> C : webrtc-call-request
+  C -> WS : webrtc-call-accept
+  WS --> R : webrtc-call-accept
+  R -> WS : webrtc-offer + webrtc-ice-candidate
+  WS --> C : webrtc-offer + webrtc-ice-candidate
+  C -> WS : webrtc-answer + webrtc-ice-candidate
+  WS --> R : webrtc-answer + webrtc-ice-candidate
+  note over R, C : Flux audio/vidéo pair-à-pair (P2P) établi
+end
+
+R -> WS : webrtc-call-end / disconnect
+WS --> C : user-left + webrtc-call-end
+
+@enduml

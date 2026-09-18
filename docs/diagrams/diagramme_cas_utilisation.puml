@@ -1,0 +1,120 @@
+@startuml diagramme_cas_utilisation
+' Cas d'utilisation global - STB Recruitment
+' Version validée : 4 acteurs, sans héritage d'acteurs.
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+  FontColor #203040
+}
+skinparam actor {
+  BackgroundColor #FFF6E5
+  BorderColor #B7791F
+  FontColor #203040
+}
+
+actor "Visiteur" as Visitor
+actor "Candidat inscrit" as Candidate
+actor "Recruteur" as Recruiter
+actor "Administrateur" as Admin
+
+rectangle "Plateforme de recrutement" {
+  ' Visiteur
+  usecase "S'inscrire" as UC_register
+
+  ' Candidat inscrit
+  usecase "Gérer son profil" as UC_candidateProfile
+  usecase "Téléverser son CV" as UC_uploadCV
+  usecase "Consulter les offres\nd'emploi" as UC_browse
+  usecase "Postuler à une offre" as UC_apply
+  usecase "Consulter ses\nentretiens" as UC_myInterviews
+  usecase "Participer à un\nentretien" as UC_joinInterview
+  usecase "Passer le quiz\nd'évaluation" as UC_takeQuiz
+  usecase "Consulter son\nrapport de quiz" as UC_viewReport
+  usecase "Obtenir des conseils\nde préparation (IA)" as UC_prep
+
+  ' Recruteur
+  usecase "Gérer son profil" as UC_recruiterProfile
+  usecase "Publier une offre\nd'emploi" as UC_publish
+  usecase "Gérer ses offres" as UC_manageJobs
+  usecase "Consulter les\ncandidatures reçues" as UC_viewApps
+  usecase "Consulter le profil\nd'un candidat" as UC_viewCandidate
+  usecase "Accepter la\ncandidature" as UC_accept
+  usecase "Refuser la\ncandidature" as UC_reject
+  usecase "Planifier un\nentretien" as UC_schedule
+  usecase "Mener un entretien\nen ligne" as UC_lead
+  usecase "Générer un quiz\npar IA" as UC_genQuiz
+
+  ' Administrateur
+  usecase "Gérer son profil" as UC_adminProfile
+  usecase "Gérer les\nutilisateurs" as UC_manageUsers
+  usecase "Créer un compte\nrecruteur" as UC_createRecruiter
+  usecase "Gérer les offres\net entretiens" as UC_adminManage
+
+  ' Authentification, positionnée à droite comme validé sur le schéma manuscrit.
+  usecase "S'authentifier" as UC_auth
+}
+
+' Associations acteurs - aucun héritage.
+Visitor --> UC_register
+
+Candidate --> UC_candidateProfile
+Candidate --> UC_uploadCV
+Candidate --> UC_browse
+Candidate --> UC_apply
+Candidate --> UC_myInterviews
+Candidate --> UC_joinInterview
+Candidate --> UC_takeQuiz
+Candidate --> UC_viewReport
+Candidate --> UC_prep
+
+Recruiter --> UC_recruiterProfile
+Recruiter --> UC_publish
+Recruiter --> UC_manageJobs
+Recruiter --> UC_viewApps
+Recruiter --> UC_viewCandidate
+Recruiter --> UC_accept
+Recruiter --> UC_reject
+Recruiter --> UC_schedule
+Recruiter --> UC_lead
+Recruiter --> UC_genQuiz
+
+Admin --> UC_adminProfile
+Admin --> UC_manageUsers
+Admin --> UC_createRecruiter
+Admin --> UC_adminManage
+
+' Chaque action protégée inclut l'authentification, sauf S'inscrire.
+UC_candidateProfile ..> UC_auth : <<include>>
+UC_uploadCV ..> UC_auth : <<include>>
+UC_browse ..> UC_auth : <<include>>
+UC_apply ..> UC_auth : <<include>>
+UC_myInterviews ..> UC_auth : <<include>>
+UC_joinInterview ..> UC_auth : <<include>>
+UC_takeQuiz ..> UC_auth : <<include>>
+UC_viewReport ..> UC_auth : <<include>>
+UC_prep ..> UC_auth : <<include>>
+
+UC_recruiterProfile ..> UC_auth : <<include>>
+UC_publish ..> UC_auth : <<include>>
+UC_manageJobs ..> UC_auth : <<include>>
+UC_viewApps ..> UC_auth : <<include>>
+UC_viewCandidate ..> UC_auth : <<include>>
+UC_accept ..> UC_auth : <<include>>
+UC_reject ..> UC_auth : <<include>>
+UC_schedule ..> UC_auth : <<include>>
+UC_lead ..> UC_auth : <<include>>
+UC_genQuiz ..> UC_auth : <<include>>
+
+UC_adminProfile ..> UC_auth : <<include>>
+UC_manageUsers ..> UC_auth : <<include>>
+UC_createRecruiter ..> UC_auth : <<include>>
+UC_adminManage ..> UC_auth : <<include>>
+
+@enduml

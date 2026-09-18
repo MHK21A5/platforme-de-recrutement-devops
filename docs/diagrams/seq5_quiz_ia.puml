@@ -1,0 +1,67 @@
+@startuml seq5_quiz_ia
+' Diagramme de séquence - Évaluation par quiz généré par IA (Ollama)
+title Diagramme de séquence — Quiz d'évaluation généré par IA
+
+skinparam shadowing false
+skinparam participant {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+}
+skinparam actorStyle awesome
+
+actor "Recruteur" as R
+actor "Candidat" as C
+participant "Application Web\n(React)" as Web
+participant "API REST\n(Express)" as API
+participant "Service IA\n(Ollama — qwen2.5:1.5b)" as IA
+participant "Serveur Socket.IO" as WS
+database "MongoDB" as DB
+
+== Génération du quiz par IA ==
+R -> Web : Cliquer "Générer le quiz"
+Web -> API : POST /api/interviews/:id/quiz/generate
+API -> API : buildPrompt(job, requiredSkills, niveau)
+API -> IA : POST /api/generate { model, prompt, stream:false }
+alt IA disponible
+  IA --> API : réponse JSON (8 questions QCM)
+  API -> API : extractJson + normalize + ensureQuestions
+else IA indisponible / réponse invalide
+  API -> API : buildFallbackQuestions(job) (banque de secours)
+end
+API -> DB : Interview.quiz = { status:"ready", questions }
+API -> WS : emit("quiz:generated") vers room "interview-<id>"
+WS --> Web : quiz:generated (recruteur + candidat)
+API --> Web : 200 quiz prêt
+
+== Démarrage & passage du quiz ==
+R -> API : POST /api/interviews/:id/quiz/start
+API -> DB : quiz.status = "in_progress"
+API -> WS : emit("quiz:started")
+WS --> C : quiz:started
+
+loop Pour chaque question (minuterie 30 s, auto-soumission)
+  C -> Web : Sélectionner une réponse
+  Web -> API : POST /api/interviews/:id/quiz/answer { questionId, answer }
+  API -> API : isCorrect = (answer == correctAnswer)
+  API -> DB : quiz.answers.push({ answer, isCorrect })
+  API -> WS : emit("quiz:answer-submitted")
+  WS --> R : progression mise à jour
+end
+
+== Clôture & rapport ==
+R -> API : POST /api/interviews/:id/quiz/complete
+API -> API : computeQuizScore(answers, total)
+API -> DB : quiz.status = "completed"
+API -> DB : upsert QuizResult({ score, passed, summary, ... })
+API -> WS : emit("quiz:completed") vers room "interview-<id>"
+
+group Notification du candidat
+  API -> DB : create Notification(type = "quiz_completed")
+  API -> WS : emit("notification:new") vers "user-<candidat>"
+  WS --> C : notification:new + toast
+end
+
+API --> R : 200 quiz clôturé
+R -> Web : Consulter le rapport (donut, barres, analyse IA textuelle)
+
+@enduml

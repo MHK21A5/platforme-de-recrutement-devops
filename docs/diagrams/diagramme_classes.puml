@@ -1,0 +1,177 @@
+@startuml diagramme_classes
+' Diagramme de classes métier - Plateforme de recrutement
+' Les flèches sont réservées à la généralisation.
+
+top to bottom direction
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam monochrome true
+hide circle
+
+class User {
+  -_id : ObjectId
+  -name : String
+  -email : String {unique}
+  -passwordHash : String
+  -role : String
+  -profileImage : String
+  -createdAt : Date
+  -updatedAt : Date
+  --
+  +sAuthentifier(email : String, password : String) : Boolean
+  +mettreAJourProfil() : void
+}
+
+class Admin {
+  --
+  +gererUtilisateurs() : void
+  +creerCompteRecruteur() : void
+  +supprimerUtilisateur() : void
+  +superviserOffresEtEntretiens() : void
+}
+
+class Candidat {
+  -cv : String
+  --
+  +televerserCV() : void
+  +consulterOffres() : Job[]
+  +postuler(job : Job) : Application
+  +participerEntretien(interview : Interview) : void
+  +passerQuiz() : void
+  +consulterRapportQuiz() : void
+}
+
+class Recruteur {
+  -googleCalendarConnected : Boolean
+  -googleCalendarEmail : String
+  --
+  +publierOffre(job : Job) : void
+  +gererOffres() : void
+  +traiterCandidature(application : Application) : void
+  +planifierEntretien() : Interview
+  +menerEntretien(interview : Interview) : void
+  +genererQuizIA(interview : Interview) : void
+}
+
+class CVInfo {
+  -_id : ObjectId
+  -fullName : String
+  -email : String
+  -phone : String
+  -linkedIn : String
+  -github : String
+  -portfolio : String
+  -summary : String
+  -skills : String[]
+  -languages : String[]
+  -certifications : String[]
+  -rawText : String
+}
+
+class Education {
+  -institution : String
+  -degree : String
+  -field : String
+  -startYear : String
+  -endYear : String
+}
+
+class Experience {
+  -company : String
+  -title : String
+  -startDate : String
+  -endDate : String
+  -description : String
+}
+
+class Job {
+  -_id : ObjectId
+  -title : String
+  -position : String
+  -description : String
+  -requiredSkills : String[]
+  -experienceLevel : ExperienceLevel
+  -minExperienceYears : Number
+  -location : String
+  -status : JobStatus
+  -createdAt : Date
+  --
+  +ouvrir() : void
+  +cloturer() : void
+}
+
+class Application {
+  -_id : ObjectId
+  -status : ApplicationStatus
+  -createdAt : Date
+  -updatedAt : Date
+  --
+  +accepter() : void
+  +refuser() : void
+}
+
+class Interview {
+  -_id : ObjectId
+  -title : String
+  -scheduledAt : Date
+  -status : InterviewStatus
+  -googleCalendarEventId : String
+  -googleCalendarHtmlLink : String
+  -createdAt : Date
+  -updatedAt : Date
+  --
+  +demarrer() : void
+  +terminer() : void
+}
+
+enum JobStatus <<enumeration>> {
+  open
+  closed
+}
+
+enum InterviewStatus <<enumeration>> {
+  pending
+  ongoing
+  finished
+}
+
+enum ApplicationStatus <<enumeration>> {
+  pending
+  accepted
+  rejected
+}
+
+enum ExperienceLevel <<enumeration>> {
+  intern
+  junior
+  mid
+  senior
+}
+
+' Généralisation : les seules relations orientées du diagramme.
+User <|-- Admin
+User <|-- Candidat
+User <|-- Recruteur
+
+' Associations métier sans flèche directionnelle.
+Candidat "1" -- "0..1" CVInfo : possède
+CVInfo "1" *-- "0..*" Education : contient
+CVInfo "1" *-- "0..*" Experience : contient
+
+Recruteur "1" -- "0..*" Job : publie
+Candidat "1" -- "0..*" Application : soumet
+Recruteur "1" -- "0..*" Application : traite
+Job "1" -- "0..*" Application : reçoit
+
+Recruteur "1" -- "0..*" Interview : planifie
+Candidat "1" -- "0..*" Interview : participe
+Job "1" -- "0..*" Interview : concerne
+
+' Dépendances de typage vers les énumérations utilisées par les attributs.
+Application ..> ApplicationStatus
+Job ..> JobStatus
+Job ..> ExperienceLevel
+Interview ..> InterviewStatus
+
+@enduml

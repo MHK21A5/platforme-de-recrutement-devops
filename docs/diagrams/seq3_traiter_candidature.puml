@@ -1,0 +1,49 @@
+@startuml seq3_traiter_candidature
+' Diagramme de séquence - Traiter une candidature (analyse CV / ATS + décision)
+title Diagramme de séquence — Traiter une candidature (ATS)
+
+skinparam shadowing false
+skinparam participant {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+}
+skinparam actorStyle awesome
+
+actor "Recruteur" as R
+participant "Application Web\n(React)" as Web
+participant "API REST\n(Express)" as API
+database "MongoDB" as DB
+
+R -> Web : Ouvrir les candidatures reçues
+Web -> API : GET /api/applications/recruiter (JWT)
+API -> DB : find Application({ recruiter, status: "pending" })
+DB --> API : candidatures (+ offre, candidat)
+API --> Web : 200 liste des candidatures
+Web --> R : Afficher les candidatures
+
+R -> Web : Consulter le profil d'un candidat
+Web -> API : GET /api/applications/:id/candidate-details
+API -> DB : find Application + populate(job, candidate)
+API -> DB : find CVInfo({ user: candidat })
+DB --> API : CV analysé (ATS)
+API -> API : computeMatchScore(cvInfo, job)\ncompétences 50 + expérience 30 + formation 20
+API --> Web : 200 { candidate, cvInfo, score, breakdown }
+Web --> R : Afficher le profil + score de matching
+
+alt Accepter la candidature (via planification)
+  R -> Web : Cliquer "Créer un entretien"
+  Web -> API : POST /api/interviews { title, job, candidate, scheduledAt }
+  Web -> API : PUT /api/applications/:id/accept
+  API -> DB : findOneAndUpdate("pending" -> "accepted")
+  DB --> API : candidature mise à jour
+  API --> Web : 200 candidature acceptée
+else Refuser la candidature
+  R -> Web : Cliquer "Refuser"
+  Web -> API : PUT /api/applications/:id/reject
+  API -> DB : findOneAndUpdate("pending" -> "rejected")
+  DB --> API : candidature mise à jour
+  API --> Web : 200 candidature refusée
+end
+Web --> R : Toast de confirmation + mise à jour de la liste
+
+@enduml

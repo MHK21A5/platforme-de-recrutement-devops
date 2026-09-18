@@ -1,0 +1,48 @@
+@startuml seq1_authentification
+' Diagramme de séquence - Authentification (Inscription / Connexion)
+title Diagramme de séquence — Authentification
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam participant {
+  BackgroundColor #EAF2FB
+  BorderColor #2B6CB0
+}
+skinparam actorStyle awesome
+
+actor "Candidat" as U
+participant "Application Web\n(React)" as Web
+participant "API REST\n(Express)" as API
+database "MongoDB" as DB
+
+== Inscription ==
+U -> Web : Saisir nom, email, mot de passe
+Web -> API : POST /api/users/register
+API -> DB : findOne({ email })
+DB --> API : utilisateur existant ?
+alt Email déjà utilisé
+  API --> Web : 400 "User already exists"
+else Email disponible
+  API -> API : bcrypt.hash(password)
+  API -> DB : create User(role = "candidate")
+  DB --> API : utilisateur créé
+  API --> Web : 201 "Candidate registered successfully"
+end
+Web --> U : Confirmation / aller à la connexion
+
+== Connexion ==
+U -> Web : Saisir email + mot de passe
+Web -> API : POST /api/users/login
+API -> DB : findOne({ email })
+DB --> API : utilisateur
+alt Identifiants invalides
+  API --> Web : 400 "Invalid credentials"
+else Identifiants valides
+  API -> API : bcrypt.compare(password)
+  API -> API : jwt.sign({ id, role }, expiresIn 1j)
+  API --> Web : 200 { token, user }
+  Web -> Web : Stocker le token JWT (localStorage)
+  Web --> U : Redirection vers le tableau de bord
+end
+
+@enduml
