@@ -16,6 +16,14 @@ pipeline {
             }
         }
 
+        stage('Backend Validation') {
+            steps {
+                dir('backend') {
+                    sh 'node --check app.js'
+                }
+            }
+        }
+
         stage('Install Frontend Dependencies') {
             steps {
                 dir('frontend') {
