@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Checkout') {
             steps {
                 echo 'Repository checkout completed'
@@ -45,6 +46,13 @@ pipeline {
                 dir('frontend') {
                     sh 'npm run build'
                 }
+            }
+        }
+
+        stage('Archive Frontend Build') {
+            steps {
+                archiveArtifacts artifacts: 'frontend/dist/**',
+                                 fingerprint: true
             }
         }
     }
