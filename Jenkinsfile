@@ -9,6 +9,12 @@ pipeline {
             }
         }
 
+        stage('Clean Workspace') {
+            steps {
+                sh 'rm -rf backend/node_modules frontend/node_modules frontend/dist'
+            }
+        }
+
         stage('Install Backend Dependencies') {
             steps {
                 dir('backend') {
