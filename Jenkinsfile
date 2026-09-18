@@ -4,17 +4,50 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Repository checkout successful'
+                echo 'Repository checkout completed'
             }
         }
 
-        stage('Inspect Project') {
+        stage('Install Backend Dependencies') {
             steps {
-                sh 'pwd'
-                sh 'ls -la'
-                sh 'ls -la backend'
-                sh 'ls -la frontend'
+                dir('backend') {
+                    sh 'npm ci'
+                }
             }
+        }
+
+        stage('Install Frontend Dependencies') {
+            steps {
+                dir('frontend') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Frontend Lint') {
+            steps {
+                dir('frontend') {
+                    sh 'npm run lint'
+                }
+            }
+        }
+
+        stage('Frontend Build') {
+            steps {
+                dir('frontend') {
+                    sh 'npm run build'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'CI pipeline failed. Check the logs.'
         }
     }
 }
