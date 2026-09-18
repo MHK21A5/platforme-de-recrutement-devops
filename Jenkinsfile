@@ -31,6 +31,14 @@ pipeline {
             }
         }
 
+        stage('Backend Tests') {
+            steps {
+                dir('backend') {
+                    sh 'npm test'
+                }
+            }
+        }
+
         stage('Backend Security Audit') {
             steps {
                 dir('backend') {
