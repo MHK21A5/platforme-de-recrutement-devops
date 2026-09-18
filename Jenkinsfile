@@ -152,8 +152,37 @@ pipeline {
                         exit 1
                     fi
 
-                    curl --fail --silent --show-error http://localhost:8081/ > /dev/null
-                    curl --silent --show-error --max-time 5 http://localhost:5000/ > /dev/null
+                    for i in $(seq 1 10); do
+                        if curl --fail --silent --show-error http://localhost:8081/ > /dev/null; then
+                            echo "Frontend is ready"
+                            break
+                        fi
+
+                        if [ "$i" -eq 10 ]; then
+                            echo "Frontend failed to become ready"
+                            docker logs recruitment-frontend || true
+                            exit 1
+                        fi
+
+                        echo "Waiting for frontend... attempt $i/10"
+                        sleep 3
+                    done
+
+                    for i in $(seq 1 10); do
+                        if bash -c 'echo > /dev/tcp/127.0.0.1/5000' 2>/dev/null; then
+                            echo "Backend is ready"
+                            break
+                        fi
+
+                        if [ "$i" -eq 10 ]; then
+                            echo "Backend failed to become ready"
+                            docker logs recruitment-backend || true
+                            exit 1
+                        fi
+
+                        echo "Waiting for backend... attempt $i/10"
+                        sleep 3
+                    done
                 '''
             }
         }
