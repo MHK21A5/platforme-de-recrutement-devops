@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import { motion as Motion, AnimatePresence } from "framer-motion";
-import { useSocket } from "../context/SocketContext";
-import { useToast } from "../context/ToastContext";
+import { useSocket } from "../context/useSocket";
+import { useToast } from "../context/useToast";
 import { TiltCard } from "../components/TiltCard";
 import { AppShell, Avatar } from "../components/AppShell";
 import { candidateNav, recruiterNav } from "../components/nav";
@@ -74,14 +74,9 @@ function GoogleCalendarCard() {
   const [state, setState] = useState({ loading: true, configured: false, connected: false, email: null });
   const [busy, setBusy] = useState(false);
 
-  const loadStatus = async () => {
-    try {
-      const res = await api.get("/google/status");
-      setState({ loading: false, ...res.data });
-    } catch {
-      setState({ loading: false, configured: false, connected: false, email: null });
-    }
-  };
+  const loadStatus = () => api.get("/google/status")
+    .then((res) => setState({ loading: false, ...res.data }))
+    .catch(() => setState({ loading: false, configured: false, connected: false, email: null }));
 
   useEffect(() => { loadStatus(); }, []);
 
@@ -191,13 +186,15 @@ function ProfileTab({ userProfile, onProfileUpdated }) {
   const cvInputRef = useRef(null);
   const imgInputRef = useRef(null);
 
-  useEffect(() => {
+  const [previousProfile, setPreviousProfile] = useState(userProfile);
+  if (previousProfile !== userProfile) {
+    setPreviousProfile(userProfile);
     setForm((prev) => ({
       ...prev,
       name: userProfile?.name || "",
       email: userProfile?.email || "",
     }));
-  }, [userProfile]);
+  }
 
 
 
@@ -1157,7 +1154,7 @@ function InterviewCalendar({ interviews, onJoin }) {
       map[key].push(i);
     });
     return map;
-  }, [interviews, cursor]);
+  }, [interviews]);
 
   const prev = () => setCursor(c => c.month === 0 ? {year:c.year-1,month:11} : {year:c.year,month:c.month-1});
   const next = () => setCursor(c => c.month === 11 ? {year:c.year+1,month:0} : {year:c.year,month:c.month+1});
@@ -1467,29 +1464,35 @@ useEffect(() => {
   /* ── Deep link from a notification action ──────────────────────────────────
    * /dashboard?tab=applications&application=<id> opens the existing prefilled
    * scheduling card. Nothing is created here — the recruiter still confirms.  */
+  const linkedTab = searchParams.get("tab");
+  const linkedApplicationId = searchParams.get("application");
+  const linkKey = searchParams.toString();
+  const [handledTabLink, setHandledTabLink] = useState(null);
+  const [handledApplicationLink, setHandledApplicationLink] = useState(null);
+  const canResolveApplication = !isRecruiter || applicationsLoaded;
+  const linkedApplication = jobApplications.find((a) => a._id === linkedApplicationId);
+
+  // Adjust local UI state once per link, before rendering the scheduling card.
+  if (handledTabLink !== linkKey) {
+    setHandledTabLink(linkKey);
+    if (linkedTab) setActiveTab(linkedTab);
+  }
+  const applicationLinkKey = linkedApplicationId && canResolveApplication ? linkKey : null;
+  if (handledApplicationLink !== applicationLinkKey) {
+    setHandledApplicationLink(applicationLinkKey);
+    if (isRecruiter && linkedApplication) setSelectedApplication(linkedApplication);
+  }
+
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    const applicationId = searchParams.get("application");
-    if (!tab && !applicationId) return;
-
-    if (tab) setActiveTab(tab);
-    if (!applicationId) return;
-
-    // Wait for the recruiter's pending list before deciding it's gone.
-    if (isRecruiter && !applicationsLoaded) return;
-
-    if (isRecruiter) {
-      const application = jobApplications.find((a) => a._id === applicationId);
-      if (application) setSelectedApplication(application);
-      else toast.info("This application is no longer pending.");
+    if (!linkedApplicationId || !canResolveApplication) return;
+    if (isRecruiter && !linkedApplication) {
+      toast.info("This application is no longer pending.");
     }
-
     const next = new URLSearchParams(searchParams);
     next.delete("tab");
     next.delete("application");
     setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, jobApplications, applicationsLoaded, isRecruiter]);
+  }, [linkedApplicationId, canResolveApplication, isRecruiter, linkedApplication, searchParams, setSearchParams, toast]);
 
   const socket = useSocket();
 
@@ -2324,7 +2327,7 @@ const tabs = isRecruiter
                 {/* Score bar chart — one bar per result */}
                 <div style={{ fontSize:"0.72rem", color:"var(--muted-foreground)", marginBottom:"0.5rem", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>Score history</div>
                 <div style={{ display:"flex", gap:"0.4rem", alignItems:"flex-end", height:80, overflowX:"auto", paddingBottom:"0.25rem" }}>
-                  {[...quizResults].sort((a,b)=>new Date(a.completedAt)-new Date(b.completedAt)).map((r,i) => (
+                  {[...quizResults].sort((a,b)=>new Date(a.completedAt)-new Date(b.completedAt)).map((r) => (
                     <div key={r._id} title={`${r.interview?.title||"Interview"}: ${r.score}%`}
                       onClick={() => handleViewQuizReport(r)}
                       style={{ flex:"0 0 28px", display:"flex", flexDirection:"column", alignItems:"center", gap:"0.2rem", cursor:"pointer" }}>

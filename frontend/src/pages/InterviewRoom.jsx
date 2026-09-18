@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { motion as Motion } from "framer-motion";
 import api from "../services/api";
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../context/useToast";
 import { TiltCard } from "../components/TiltCard";
 import { Avatar } from "../components/AppShell";
 import { Badge } from "../components/ui/Badge";
@@ -246,8 +246,7 @@ export default function InterviewRoom() {
   const [interview,        setInterview]        = useState(null);
   const [loadingInterview, setLoadingInterview] = useState(true);
   const [fetchError,       setFetchError]       = useState("");
-  const [cvInfo,           setCvInfo]           = useState(null);
-  const [cvInfoLoading,    setCvInfoLoading]    = useState(false);
+  const [cvResponse, setCvResponse] = useState(null);
   const [messages,         setMessages]         = useState([]);
   const [inputText,        setInputText]        = useState("");
   const [connected,        setConnected]        = useState(false);
@@ -261,7 +260,6 @@ export default function InterviewRoom() {
   const [selectedOption,   setSelectedOption]   = useState("");
   const [quizActionMessage,setQuizActionMessage]= useState("");
   const [tabAlert,         setTabAlert]         = useState("");
-  const [candidateVisible, setCandidateVisible] = useState(true);
   const [questionTimer,    setQuestionTimer]    = useState(30);
 
   const recruiter    = interview?.recruiter;
@@ -507,68 +505,94 @@ const stopVoiceActivity = () => {
       .finally(() => setLoadingInterview(false));
   }, [id, token, navigate]);
 
-  /* ── fetch candidate CV (recruiter only) ─────────────────────────────────── */
+  /* Fetch candidate CV (recruiter only); loading follows the requested candidate. */
+  const cvCandidateId = isRecruiter ? interview?.candidate?._id : null;
+  const cvInfoLoading = Boolean(cvCandidateId && cvResponse?.candidateId !== cvCandidateId);
+  const cvInfo = cvResponse?.candidateId === cvCandidateId ? cvResponse?.data : null;
   useEffect(() => {
-    if (!interview || user?.role !== "recruiter") return;
-    const cid = interview?.candidate?._id;
-    if (!cid) return;
-    setCvInfoLoading(true);
-    api.get(`/users/candidates/${cid}/cv-info`)
-      .then((r) => setCvInfo(r.data))
-      .catch(() => setCvInfo(null))
-      .finally(() => setCvInfoLoading(false));
-  }, [interview, user?.role]);
+    if (!cvCandidateId) return;
+    let active = true;
+    api.get(`/users/candidates/${cvCandidateId}/cv-info`)
+      .then((r) => {
+        if (active) setCvResponse({ candidateId: cvCandidateId, data: r.data });
+      })
+      .catch(() => {
+        if (active) setCvResponse({ candidateId: cvCandidateId, data: null });
+      });
+    return () => { active = false; };
+  }, [cvCandidateId]);
 
-  const loadQuizState = useCallback(async () => {
+  const fetchQuiz = useCallback(() => {
+    if (!id) return;
+    return api.get(`/interviews/${id}/quiz`).then((res) => {
+      setQuiz(res.data.quiz);
+    }).catch((err) => {
+      setQuizError(err.response?.data?.message || "Unable to load quiz state.");
+      setQuiz(null);
+    }).finally(() => {
+      setQuizLoading(false);
+    });
+  }, [id]);
+
+  const loadQuizState = useCallback(() => {
     if (!id) return;
     setQuizLoading(true);
     setQuizError("");
-    try {
-      const res = await api.get(`/interviews/${id}/quiz`);
-      setQuiz(res.data.quiz);
-    } catch (err) {
-      setQuizError(err.response?.data?.message || "Unable to load quiz state.");
-      setQuiz(null);
-    } finally {
-      setQuizLoading(false);
-    }
+    return fetchQuiz();
+  }, [id, fetchQuiz]);
+
+  const fetchQuizResult = useCallback(() => {
+    if (!id) return;
+    return api.get(`/interviews/${id}/quiz/result`).then((res) => {
+      setQuizResult(res.data.quizResult);
+    }).catch((err) => {
+      setQuizResultError(err.response?.data?.message || "Unable to load quiz result.");
+      setQuizResult(null);
+    }).finally(() => {
+      setQuizResultLoading(false);
+    });
   }, [id]);
 
-  const loadQuizResult = useCallback(async () => {
+  const loadQuizResult = useCallback(() => {
     if (!id) return;
     setQuizResultLoading(true);
     setQuizResultError("");
-    try {
-      const res = await api.get(`/interviews/${id}/quiz/result`);
-      setQuizResult(res.data.quizResult);
-    } catch (err) {
-      setQuizResultError(err.response?.data?.message || "Unable to load quiz result.");
-      setQuizResult(null);
-    } finally {
-      setQuizResultLoading(false);
-    }
-  }, [id]);
+    return fetchQuizResult();
+  }, [id, fetchQuizResult]);
 
   useEffect(() => {
     if (!token || !interview) return;
-    loadQuizState();
-  }, [interview, token, loadQuizState]);
+    fetchQuiz();
+  }, [interview, token, fetchQuiz]);
 
-  useEffect(() => {
-    if (!quiz || quiz.status !== "completed") {
-      setQuizResult(null);
-      return;
+  const [previousInterview, setPreviousInterview] = useState(null);
+  if (previousInterview !== interview) {
+    setPreviousInterview(interview);
+    if (token && interview) {
+      setQuizLoading(true);
+      setQuizError("");
     }
+  }
 
-    loadQuizResult();
-  }, [quiz, loadQuizResult]);
+  const [previousQuiz, setPreviousQuiz] = useState(null);
+  if (previousQuiz !== quiz) {
+    setPreviousQuiz(quiz);
+    if (quiz?.status === "completed") {
+      setQuizResultLoading(true);
+      setQuizResultError("");
+    } else {
+      setQuizResult(null);
+    }
+  }
+  useEffect(() => {
+    if (quiz?.status === "completed") fetchQuizResult();
+  }, [quiz, fetchQuizResult]);
 
   useEffect(() => {
     if (!isCandidate || !connected || !socketRef.current || !id) return;
 
     const sendVisibility = () => {
       const hidden = document.visibilityState !== "visible";
-      setCandidateVisible(!hidden);
       const eventName = hidden ? "candidate-tab-hidden" : "candidate-tab-visible";
       socketRef.current.emit(eventName, { interviewId: id });
     };
@@ -611,22 +635,27 @@ const stopVoiceActivity = () => {
     }
   }, [id]);
 
+  const currentQuestionId = quiz?.currentQuestion?.questionId;
+  const timerActive = isCandidate && quiz?.status === "in_progress" && Boolean(currentQuestionId);
+  const timerKey = timerActive ? currentQuestionId : null;
+  const [previousTimerKey, setPreviousTimerKey] = useState(null);
+  if (previousTimerKey !== timerKey) {
+    setPreviousTimerKey(timerKey);
+    if (timerActive) setQuestionTimer(30);
+  }
   useEffect(() => {
-    if (!isCandidate || quiz?.status !== "in_progress" || !quiz?.currentQuestion) return;
-    setQuestionTimer(30);
-    const questionId = quiz.currentQuestion.questionId;
+    if (!timerActive) return;
+    let remaining = 30;
     const interval = setInterval(() => {
-      setQuestionTimer((t) => {
-        if (t <= 1) {
-          clearInterval(interval);
-          autoSubmitAnswer(questionId, selectedOptionRef.current);
-          return 0;
-        }
-        return t - 1;
-      });
+      remaining -= 1;
+      setQuestionTimer(remaining);
+      if (remaining === 0) {
+        clearInterval(interval);
+        autoSubmitAnswer(currentQuestionId, selectedOptionRef.current);
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [quiz?.currentQuestion?.questionId, quiz?.status, isCandidate, autoSubmitAnswer]);
+  }, [currentQuestionId, timerActive, autoSubmitAnswer]);
 
   const handleGenerateQuiz = async () => {
     if (!id) return;
@@ -766,7 +795,7 @@ const stopVoiceActivity = () => {
       const arr = [...pendingCandidatesRef.current];
       pendingCandidatesRef.current = [];
       for (const c of arr) {
-        try { await peerRef.current.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+        try { await peerRef.current.addIceCandidate(new RTCIceCandidate(c)); } catch { /* Best effort: the peer or camera may no longer be available. */ }
       }
     }
 
@@ -1040,7 +1069,7 @@ const stopVoiceActivity = () => {
             const ns2 = new MediaStream([ct2, ...at2]);
             localStreamRef.current = ns2;
             setLocalStream(ns2);
-          } catch {}
+          } catch { /* Best effort: the peer or camera may no longer be available. */ }
           isScreenSharingRef.current = false;
           setIsScreenSharing(false);
         };

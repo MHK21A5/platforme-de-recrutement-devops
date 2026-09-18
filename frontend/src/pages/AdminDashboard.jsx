@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { motion as Motion } from "framer-motion";
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../context/useToast";
 import { TiltCard } from "../components/TiltCard";
 import { AppShell } from "../components/AppShell";
 import { adminNav } from "../components/nav";
@@ -155,7 +155,7 @@ export default function AdminDashboard() {
   const [editJobData, setEditJobData] = useState(emptyJobForm);
 
   // ── data fetchers ──────────────────────────────────────────────────────────
-  const fetchUsers = async (role = "") => {
+  const fetchUsers = useCallback(async (role = "") => {
     try {
       const url = role ? `/users?role=${role}` : "/users";
       const res = await api.get(url);
@@ -168,9 +168,9 @@ export default function AdminDashboard() {
       console.error(err);
       toast.error("Failed to load users");
     }
-  };
+  }, [toast]);
 
-  const fetchInterviews = async () => {
+  const fetchInterviews = useCallback(async () => {
     try {
       const res = await api.get("/interviews/admin/all");
       setInterviews(res.data);
@@ -178,9 +178,9 @@ export default function AdminDashboard() {
       console.error(err);
       toast.error("Failed to load interviews");
     }
-  };
+  }, [toast]);
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const res = await api.get("/jobs/admin/all");
       setJobs(res.data);
@@ -188,9 +188,9 @@ export default function AdminDashboard() {
       console.error(err);
       toast.error("Failed to load jobs");
     }
-  };
+  }, [toast]);
 
-  const fetchQuizResults = async () => {
+  const fetchQuizResults = useCallback(async () => {
     setQuizResultsLoading(true);
     setQuizResultsError("");
     try {
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
     } finally {
       setQuizResultsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -212,7 +212,7 @@ export default function AdminDashboard() {
       await fetchJobs();
       await fetchQuizResults();
     })();
-  }, []);
+  }, [fetchUsers, fetchInterviews, fetchJobs, fetchQuizResults]);
 
   // ── handlers: recruiters ──────────────────────────────────────────────────
   const handleRecruiterChange = (e) =>

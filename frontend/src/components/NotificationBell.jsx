@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { BellIcon } from "./icons";
 import { Button } from "./ui/Button";
-import { useNotifications } from "../context/NotificationContext";
+import { useNotifications } from "../context/useNotifications";
 
 function timeAgo(iso) {
   if (!iso) return "";

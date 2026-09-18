@@ -1,8 +1,8 @@
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { CheckCircleIcon, AlertTriangleIcon, XIcon } from "../components/icons";
 
-const ToastContext = createContext(null);
+import { ToastContext } from "./useToast";
 
 const ACCENTS = {
   success: "var(--success)",
@@ -37,12 +37,12 @@ export function ToastProvider({ children }) {
     timersRef.current.set(id, timer);
   }, [dismiss]);
 
-  const api = {
+  const api = useMemo(() => ({
     success: (msg) => push("success", msg),
     error: (msg) => push("error", msg),
     warning: (msg) => push("warning", msg),
     info: (msg) => push("info", msg),
-  };
+  }), [push]);
 
   return (
     <ToastContext.Provider value={api}>
@@ -78,14 +78,6 @@ export function ToastProvider({ children }) {
   );
 }
 
-export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) {
-    // Safe no-op fallback so components never crash if rendered outside the provider.
-    return { success() {}, error() {}, warning() {}, info() {} };
-  }
-  return ctx;
-}
 
 const S = {
   container: {

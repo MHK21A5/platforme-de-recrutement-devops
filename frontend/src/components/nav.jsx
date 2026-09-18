@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import {
   LayoutDashboard,
   Calendar,
@@ -11,7 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 
-const ico = (C) => <C size={16} strokeWidth={1.8} />;
+const ico = (Component) => createElement(Component, { size: 16, strokeWidth: 1.8 });
 
 export const candidateNav = [
   { key: "dashboard",    label: "Dashboard",      icon: ico(LayoutDashboard) },

@@ -137,20 +137,23 @@ export default function QuizReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [report, setReport] = useState(location.state?.report || null);
-  const [loading, setLoading] = useState(!location.state?.report);
+  return <QuizReport key={id} id={id} navigate={navigate} initialReport={location.state?.report} />;
+}
+
+function QuizReport({ id, navigate, initialReport }) {
+  const [report, setReport] = useState(initialReport || null);
+  const [loading, setLoading] = useState(!initialReport);
   const [error, setError] = useState("");
 
   useEffect(() => {
     // If report was passed via navigation state, no need to fetch
-    if (location.state?.report) return;
+    if (initialReport) return;
     if (!id) return;
-    setLoading(true);
     api.get(`/interviews/admin/quiz-results/${id}`)
       .then((res) => setReport(res.data))
       .catch((err) => setError(err.response?.data?.message || "Failed to load report."))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, initialReport]);
 
   const correctCount = useMemo(() => (report?.answers || []).filter((a) => a.isCorrect).length, [report]);
   const wrongCount = useMemo(() => (report?.answers || []).filter((a) => !a.isCorrect).length, [report]);

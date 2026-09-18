@@ -1,9 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
-import { useSocket } from "./SocketContext";
-import { useToast } from "./ToastContext";
+import { useSocket } from "./useSocket";
+import { useToast } from "./useToast";
 
-const NotificationContext = createContext(null);
+import { NotificationContext } from "./useNotifications";
 
 export function NotificationProvider({ children }) {
   const socket = useSocket();
@@ -11,29 +11,28 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const loadNotifications = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setNotifications([]);
-      setUnreadCount(0);
-      return;
-    }
-    try {
-      const res = await api.get("/notifications");
-      setNotifications(res.data.notifications || []);
-      setUnreadCount(res.data.unreadCount || 0);
-    } catch {
-      setNotifications([]);
-      setUnreadCount(0);
-    }
-  }, []);
+  const token = localStorage.getItem("token");
+  const [previousToken, setPreviousToken] = useState(token);
+  if (previousToken !== token) {
+    setPreviousToken(token);
+    setNotifications([]);
+    setUnreadCount(0);
+  }
 
   useEffect(() => {
-    loadNotifications();
-    // Re-fetch whenever the shared socket (re)connects — this happens right
-    // after login/logout since SocketContext reconnects on route change,
-    // which is the only reliable signal that the auth token just changed.
-  }, [loadNotifications, socket]);
+    if (!token) return;
+    let active = true;
+    api.get("/notifications").then((res) => {
+      if (!active) return;
+      setNotifications(res.data.notifications || []);
+      setUnreadCount(res.data.unreadCount || 0);
+    }).catch(() => {
+      if (!active) return;
+      setNotifications([]);
+      setUnreadCount(0);
+    });
+    return () => { active = false; };
+  }, [token, socket]);
 
   useEffect(() => {
     if (!socket) return;
@@ -46,8 +45,7 @@ export function NotificationProvider({ children }) {
 
     socket.on("notification:new", onNew);
     return () => socket.off("notification:new", onNew);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket]);
+  }, [socket, toast]);
 
   const markAsRead = useCallback(async (id) => {
     setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
@@ -74,12 +72,4 @@ export function NotificationProvider({ children }) {
       {children}
     </NotificationContext.Provider>
   );
-}
-
-export function useNotifications() {
-  const ctx = useContext(NotificationContext);
-  if (!ctx) {
-    return { notifications: [], unreadCount: 0, markAsRead() {}, markAllAsRead() {} };
-  }
-  return ctx;
 }
