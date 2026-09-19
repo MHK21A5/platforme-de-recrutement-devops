@@ -12,6 +12,7 @@ const { connectToMondoDB } = require("./config/db");
 const indexRouter = require("./routes/index");
 const initSocket = require("./socket/socketHandler");
 const { setIO } = require("./socket/socketIO");
+const { registry, metricsMiddleware } = require("./monitoring/metrics");
 
 const app = express();
 const jobRoutes = require("./routes/jobs");
@@ -33,6 +34,16 @@ app.use(cors({
   credentials: true,
 }));
 
+// Keep this endpoint reachable only from the monitoring/private network in production.
+app.get("/metrics", async (req, res, next) => {
+  try {
+    res.set("Content-Type", registry.contentType);
+    res.status(200).send(await registry.metrics());
+  } catch (error) {
+    next(error);
+  }
+});
+app.use(metricsMiddleware);
 
 
 // middlewares

@@ -201,6 +201,19 @@ pipeline {
                         sleep 3
                     done
 
+                    echo '[3b/4] Checking backend Prometheus metrics'
+                    if ! metrics_output="$(curl --fail --silent --show-error http://localhost:5000/metrics)"; then
+                        echo 'Backend Prometheus metrics: FAIL'
+                        docker logs recruitment-backend || true
+                        exit 1
+                    fi
+                    if ! echo "$metrics_output" | grep -q '^# HELP http_requests_total ' ||
+                       ! echo "$metrics_output" | grep -q '^# HELP recruitment_backend_info '; then
+                        echo 'Backend Prometheus metrics: FAIL (required metrics missing)'
+                        exit 1
+                    fi
+                    echo 'Backend Prometheus metrics: PASS'
+
                     echo '[4/4] Checking Docker health status'
                     for i in $(seq 1 10); do
                         backend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-backend 2>/dev/null || true)"
