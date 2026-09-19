@@ -14,7 +14,7 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_requests_total[5m]))", "legendFormat": "All requests" }
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=\"backend\"}[5m]))", "legendFormat": "All backend requests" }
       ],
       "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } }
@@ -24,7 +24,7 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "P95 latency" }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])))", "legendFormat": "Backend P95 latency" }
       ],
       "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } }
@@ -34,7 +34,7 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "targets": [
-        { "refId": "A", "expr": "sum by (status_code) (rate(http_requests_total[5m]))", "legendFormat": "HTTP {{status_code}}" }
+        { "refId": "A", "expr": "sum by (status_code) (rate(http_requests_total{job=\"backend\"}[5m]))", "legendFormat": "HTTP {{status_code}}" }
       ],
       "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } }
@@ -44,7 +44,7 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m]))", "legendFormat": "5xx errors" }
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=\"backend\",status_code=~\"5..\"}[5m])) or vector(0)", "legendFormat": "5xx errors" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -65,7 +65,7 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "targets": [
-        { "refId": "A", "expr": "http_requests_in_flight", "legendFormat": "In flight" }
+        { "refId": "A", "expr": "http_requests_in_flight{job=\"backend\"}", "legendFormat": "Active requests" }
       ],
       "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" }
@@ -75,8 +75,8 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "targets": [
-        { "refId": "A", "expr": "nodejs_heap_size_used_bytes", "legendFormat": "Used Heap" },
-        { "refId": "B", "expr": "nodejs_heap_size_total_bytes", "legendFormat": "Total Heap" }
+        { "refId": "A", "expr": "nodejs_heap_size_used_bytes{job=\"backend\"}", "legendFormat": "Used Heap" },
+        { "refId": "B", "expr": "nodejs_heap_size_total_bytes{job=\"backend\"}", "legendFormat": "Total Heap" }
       ],
       "fieldConfig": { "defaults": { "unit": "bytes", "min": 0 }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } }
@@ -86,7 +86,7 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "targets": [
-        { "refId": "A", "expr": "process_resident_memory_bytes", "legendFormat": "Resident memory" }
+        { "refId": "A", "expr": "process_resident_memory_bytes{job=\"backend\"}", "legendFormat": "Backend resident memory" }
       ],
       "fieldConfig": { "defaults": { "unit": "bytes", "min": 0 }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } }
@@ -96,10 +96,20 @@
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "targets": [
-        { "refId": "A", "expr": "nodejs_eventloop_lag_seconds", "legendFormat": "Event loop lag" }
+        { "refId": "A", "expr": "nodejs_eventloop_lag_seconds{job=\"backend\"}", "legendFormat": "Event loop lag" }
       ],
       "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } }
+    },
+    {
+      "id": 9, "title": "Requests by Route", "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (route) (rate(http_requests_total{job=\"backend\"}[5m]))", "legendFormat": "{{route}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "desc" } }
     }
   ]
 }
