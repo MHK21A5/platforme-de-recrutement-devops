@@ -102,7 +102,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Backend') {
+        stage('Deploy with Docker Compose') {
             steps {
                 withCredentials([
                     file(
@@ -111,28 +111,24 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        docker rm -f recruitment-backend || true
-                        docker run -d \
-                            --name recruitment-backend \
-                            --restart unless-stopped \
-                            --env-file "$BACKEND_ENV_FILE" \
-                            -p 5000:5000 \
-                            recruitment-backend:latest
+                        set +x
+                        set -e
+                        trap 'rm -f backend.env' EXIT
+                        cp "$BACKEND_ENV_FILE" backend.env
+                        chmod 600 backend.env
+
+                        docker-compose down || true
+
+                        # One-time migration of containers created by the old docker run stages.
+                        for container in recruitment-backend recruitment-frontend; do
+                            if [ "$(docker inspect -f '{{if index .Config.Labels "com.docker.compose.project"}}managed{{else}}legacy{{end}}' "$container" 2>/dev/null)" = "legacy" ]; then
+                                docker rm -f "$container"
+                            fi
+                        done
+
+                        docker-compose up -d
                     '''
                 }
-            }
-        }
-
-        stage('Deploy Frontend') {
-            steps {
-                sh '''
-                    docker rm -f recruitment-frontend || true
-                    docker run -d \
-                        --name recruitment-frontend \
-                        --restart unless-stopped \
-                        -p 8081:80 \
-                        recruitment-frontend:latest
-                '''
             }
         }
 
