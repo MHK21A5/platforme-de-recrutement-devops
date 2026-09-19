@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  backend:
+    image: recruitment-backend:latest
+    container_name: recruitment-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend.env
+    ports:
+      - "5000:5000"
+
+  frontend:
+    image: recruitment-frontend:latest
+    container_name: recruitment-frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend

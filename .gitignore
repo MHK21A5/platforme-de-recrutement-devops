@@ -4,6 +4,7 @@ venv/
 .venv/
 
 # Environment / secrets
+backend.env
 .local-secrets-backup.env
 .env
 .env.*
