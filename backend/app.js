@@ -50,6 +50,10 @@ app.use("/api/applications", applicationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/google", googleAuthRoutes);
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // catch 404
 app.use((req, res, next) => {
   next(createError(404));
