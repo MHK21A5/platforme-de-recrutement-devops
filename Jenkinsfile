@@ -255,6 +255,56 @@ pipeline {
                     echo 'Application URL: http://localhost:8081'
                     echo 'Backend URL: http://localhost:5000'
                     echo '========================================'
+
+                    echo '========================================'
+                    echo 'MONITORING STACK STATUS'
+                    echo '========================================'
+                    for service in recruitment-prometheus recruitment-grafana recruitment-node-exporter recruitment-cadvisor; do
+                        running="$(docker inspect -f '{{.State.Running}}' "$service" 2>/dev/null || true)"
+                        health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}not configured{{end}}' "$service" 2>/dev/null || true)"
+                        echo "- $service: running=${running:-unknown}, health=${health:-unknown}"
+                    done
+
+                    for i in $(seq 1 10); do
+                        prometheus_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-prometheus 2>/dev/null || true)"
+                        grafana_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-grafana 2>/dev/null || true)"
+                        echo "Monitoring health attempt $i/10: prometheus=${prometheus_health:-unknown}, grafana=${grafana_health:-unknown}"
+
+                        if [ "$prometheus_health" = 'unhealthy' ]; then
+                            echo 'ERROR: recruitment-prometheus is unhealthy'
+                            docker inspect -f '{{json .State.Health}}' recruitment-prometheus || true
+                            docker logs recruitment-prometheus || true
+                            exit 1
+                        fi
+                        if [ "$grafana_health" = 'unhealthy' ]; then
+                            echo 'ERROR: recruitment-grafana is unhealthy'
+                            docker inspect -f '{{json .State.Health}}' recruitment-grafana || true
+                            docker logs recruitment-grafana || true
+                            exit 1
+                        fi
+                        if [ "$prometheus_health" = 'healthy' ] && [ "$grafana_health" = 'healthy' ]; then
+                            break
+                        fi
+                        if [ "$i" -eq 10 ]; then
+                            echo 'ERROR: monitoring services did not become healthy'
+                            if [ "$prometheus_health" != 'healthy' ]; then
+                                docker inspect -f '{{json .State.Health}}' recruitment-prometheus || true
+                                docker logs recruitment-prometheus || true
+                            fi
+                            if [ "$grafana_health" != 'healthy' ]; then
+                                docker inspect -f '{{json .State.Health}}' recruitment-grafana || true
+                                docker logs recruitment-grafana || true
+                            fi
+                            exit 1
+                        fi
+                        echo 'Waiting 3 seconds for monitoring services...'
+                        sleep 3
+                    done
+
+                    echo 'Prometheus health: HEALTHY'
+                    echo 'Grafana health: HEALTHY'
+                    echo 'Prometheus URL: http://localhost:9090'
+                    echo 'Grafana URL: http://localhost:3000'
                 '''
             }
         }
