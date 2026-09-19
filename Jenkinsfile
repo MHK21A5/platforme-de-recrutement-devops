@@ -272,7 +272,7 @@ pipeline {
                     echo '========================================'
                     echo 'MONITORING STACK STATUS'
                     echo '========================================'
-                    for service in recruitment-prometheus recruitment-grafana recruitment-node-exporter recruitment-cadvisor; do
+                    for service in recruitment-prometheus recruitment-grafana recruitment-node-exporter recruitment-cadvisor recruitment-loki recruitment-promtail; do
                         running="$(docker inspect -f '{{.State.Running}}' "$service" 2>/dev/null || true)"
                         health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}not configured{{end}}' "$service" 2>/dev/null || true)"
                         echo "- $service: running=${running:-unknown}, health=${health:-unknown}"
@@ -314,10 +314,39 @@ pipeline {
                         sleep 3
                     done
 
+                    loki_running="$(docker inspect -f '{{.State.Running}}' recruitment-loki 2>/dev/null || true)"
+                    promtail_running="$(docker inspect -f '{{.State.Running}}' recruitment-promtail 2>/dev/null || true)"
+                    if [ "$loki_running" != 'true' ]; then
+                        echo 'ERROR: recruitment-loki is not running'
+                        docker logs recruitment-loki || true
+                        exit 1
+                    fi
+                    if [ "$promtail_running" != 'true' ]; then
+                        echo 'ERROR: recruitment-promtail is not running'
+                        docker logs recruitment-promtail || true
+                        exit 1
+                    fi
+
+                    for i in $(seq 1 15); do
+                        if curl --fail --silent http://localhost:3100/ready > /dev/null; then
+                            echo 'Loki health: HEALTHY'
+                            break
+                        fi
+                        if [ "$i" -eq 15 ]; then
+                            echo 'ERROR: Loki did not become ready'
+                            docker logs recruitment-loki || true
+                            exit 1
+                        fi
+                        echo "Waiting for Loki readiness... attempt $i/15"
+                        sleep 3
+                    done
+
                     echo 'Prometheus health: HEALTHY'
                     echo 'Grafana health: HEALTHY'
+                    echo 'Promtail: RUNNING'
                     echo 'Prometheus URL: http://localhost:9090'
                     echo 'Grafana URL: http://localhost:3000'
+                    echo 'Loki URL: http://localhost:3100'
                 '''
             }
         }

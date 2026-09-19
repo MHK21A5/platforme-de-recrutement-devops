@@ -85,6 +85,7 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     depends_on:
       - prometheus
+      - loki
     healthcheck:
       test:
         - CMD-SHELL
@@ -118,6 +119,32 @@ services:
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
 
+  loki:
+    image: grafana/loki:3.6.8
+    container_name: recruitment-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:3.6.8
+    container_name: recruitment-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      # Lab-only Docker socket access; production needs restricted daemon access.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail_data:/var/lib/promtail
+    depends_on:
+      - loki
+
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
+  promtail_data:
