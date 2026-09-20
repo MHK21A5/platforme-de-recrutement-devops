@@ -12,6 +12,7 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 sh 'rm -rf backend/node_modules frontend/node_modules frontend/dist'
+                sh 'rm -f .deployment-attempted .rollback-ready'
             }
         }
 
@@ -104,30 +105,69 @@ pipeline {
 
         stage('Deploy with Docker Compose') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'backend-env-file',
-                        variable: 'BACKEND_ENV_FILE'
-                    )
-                ]) {
-                    sh '''
-                        set +x
-                        set -e
-                        trap 'rm -f backend.env' EXIT
-                        cp "$BACKEND_ENV_FILE" backend.env
-                        chmod 600 backend.env
+                script {
+                    def deploy = {
+                        withCredentials([
+                            file(credentialsId: 'backend-env-file', variable: 'BACKEND_ENV_FILE')
+                        ]) {
+                            sh '''
+                                set +x
+                                set -e
+                                trap 'rm -f backend.env' EXIT
+                                cp "$BACKEND_ENV_FILE" backend.env
+                                chmod 600 backend.env
 
-                        docker-compose down || true
+                                backend_previous=''
+                                frontend_previous=''
+                                if [ "$(docker inspect -f '{{.State.Running}}' recruitment-backend 2>/dev/null || true)" = 'true' ]; then
+                                    backend_previous="$(docker inspect -f '{{.Image}}' recruitment-backend)"
+                                    docker tag "$backend_previous" recruitment-backend:rollback
+                                fi
+                                if [ "$(docker inspect -f '{{.State.Running}}' recruitment-frontend 2>/dev/null || true)" = 'true' ]; then
+                                    frontend_previous="$(docker inspect -f '{{.Image}}' recruitment-frontend)"
+                                    docker tag "$frontend_previous" recruitment-frontend:rollback
+                                fi
+                                echo '========================================'
+                                echo 'ROLLBACK SNAPSHOT'
+                                echo '========================================'
+                                echo "Backend image: ${backend_previous:-none}"
+                                echo "Frontend image: ${frontend_previous:-none}"
+                                echo '========================================'
+                                if [ -n "$backend_previous" ] && [ -n "$frontend_previous" ]; then
+                                    touch .rollback-ready
+                                fi
 
-                        # One-time migration of containers created by the old docker run stages.
-                        for container in recruitment-backend recruitment-frontend; do
-                            if [ "$(docker inspect -f '{{if index .Config.Labels "com.docker.compose.project"}}managed{{else}}legacy{{end}}' "$container" 2>/dev/null)" = "legacy" ]; then
-                                docker rm -f "$container"
-                            fi
-                        done
+                                # Keep monitoring running while replacing the application.
+                                touch .deployment-attempted
+                                for container in recruitment-backend recruitment-frontend; do
+                                    if docker container inspect "$container" > /dev/null 2>&1; then
+                                        if [ "$(docker inspect -f '{{if index .Config.Labels "com.docker.compose.project"}}managed{{else}}legacy{{end}}' "$container")" = 'legacy' ]; then
+                                            docker rm -f "$container"
+                                        fi
+                                    fi
+                                done
 
-                        docker-compose up -d
-                    '''
+                                docker-compose up -d --no-deps --force-recreate backend frontend
+                                docker-compose up -d
+                            '''
+                        }
+                    }
+
+                    // Add these credentials and set GRAFANA_EMAIL_ENABLED=true when SMTP is ready.
+                    if (env.GRAFANA_EMAIL_ENABLED == 'true') {
+                        if (!env.GF_SMTP_HOST?.trim() || !env.GF_SMTP_FROM_ADDRESS?.trim()) {
+                            error 'Set GF_SMTP_HOST and GF_SMTP_FROM_ADDRESS before enabling Grafana email.'
+                        }
+                        withCredentials([
+                            string(credentialsId: 'grafana-smtp-user', variable: 'GF_SMTP_USER'),
+                            string(credentialsId: 'grafana-smtp-password', variable: 'GF_SMTP_PASSWORD'),
+                            string(credentialsId: 'grafana-alert-email', variable: 'GF_ALERT_EMAIL')
+                        ]) {
+                            withEnv(['GF_SMTP_ENABLED=true']) { deploy() }
+                        }
+                    } else {
+                        withEnv(['GF_SMTP_ENABLED=false']) { deploy() }
+                    }
                 }
             }
         }
@@ -135,6 +175,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
+                    set -e
                     sleep 5
                     echo '========================================'
                     echo 'DEPLOYMENT VERIFICATION'
@@ -347,6 +388,18 @@ pipeline {
                     echo 'Prometheus URL: http://localhost:9090'
                     echo 'Grafana URL: http://localhost:3000'
                     echo 'Loki URL: http://localhost:3100'
+
+                    backend_stable="$(docker inspect -f '{{.Image}}' recruitment-backend)"
+                    frontend_stable="$(docker inspect -f '{{.Image}}' recruitment-frontend)"
+                    docker tag "$backend_stable" recruitment-backend:stable
+                    docker tag "$frontend_stable" recruitment-frontend:stable
+                    echo '========================================'
+                    echo 'STABLE RELEASE UPDATED'
+                    echo '========================================'
+                    echo "Backend image: $backend_stable"
+                    echo "Frontend image: $frontend_stable"
+                    echo '========================================'
+                    rm -f .deployment-attempted .rollback-ready
                 '''
             }
         }
@@ -359,6 +412,93 @@ pipeline {
 
         failure {
             echo 'CI pipeline failed. Check the logs.'
+            script {
+                if (fileExists('.deployment-attempted')) {
+                    try {
+                        withCredentials([
+                            file(credentialsId: 'backend-env-file', variable: 'BACKEND_ENV_FILE')
+                        ]) {
+                            def rollbackStatus = sh(returnStatus: true, script: '''
+                                set +x
+                                set -e
+                                rollback_cleanup() {
+                                    status=$?
+                                    rm -f backend.env
+                                    if [ "$status" -ne 0 ]; then
+                                        echo '========================================'
+                                        echo 'AUTOMATIC ROLLBACK FAILED'
+                                        echo '========================================'
+                                        docker ps -a || true
+                                        docker logs --tail 100 recruitment-backend || true
+                                        docker logs --tail 100 recruitment-frontend || true
+                                    fi
+                                }
+                                trap rollback_cleanup EXIT
+                                cp "$BACKEND_ENV_FILE" backend.env
+                                chmod 600 backend.env
+
+                                if [ ! -f .rollback-ready ] ||
+                                   ! docker image inspect recruitment-backend:rollback > /dev/null 2>&1 ||
+                                   ! docker image inspect recruitment-frontend:rollback > /dev/null 2>&1; then
+                                    echo '========================================'
+                                    echo 'ROLLBACK SKIPPED'
+                                    echo 'Previous application images unavailable'
+                                    echo '========================================'
+                                    exit 0
+                                fi
+
+                                docker tag recruitment-backend:rollback recruitment-backend:latest
+                                docker tag recruitment-frontend:rollback recruitment-frontend:latest
+                                docker-compose up -d --no-deps --force-recreate backend frontend
+
+                                for i in $(seq 1 10); do
+                                    backend_running="$(docker inspect -f '{{.State.Running}}' recruitment-backend 2>/dev/null || true)"
+                                    frontend_running="$(docker inspect -f '{{.State.Running}}' recruitment-frontend 2>/dev/null || true)"
+                                    backend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-backend 2>/dev/null || true)"
+                                    frontend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-frontend 2>/dev/null || true)"
+                                    if [ "$backend_running" = 'true' ] && [ "$frontend_running" = 'true' ] &&
+                                       [ "$backend_health" = 'healthy' ] && [ "$frontend_health" = 'healthy' ] &&
+                                       curl --fail --silent http://localhost:5000/health > /dev/null &&
+                                       curl --fail --silent http://localhost:8081/ > /dev/null; then
+                                        echo '========================================'
+                                        echo 'AUTOMATIC ROLLBACK SUCCESSFUL'
+                                        echo '========================================'
+                                        echo 'Previous backend image restored'
+                                        echo 'Previous frontend image restored'
+                                        echo 'Backend HTTP: PASS'
+                                        echo 'Frontend HTTP: PASS'
+                                        echo 'Backend health: HEALTHY'
+                                        echo 'Frontend health: HEALTHY'
+                                        echo 'Application restored to previous release'
+                                        echo '========================================'
+                                        exit 0
+                                    fi
+                                    if [ "$i" -lt 10 ]; then
+                                        echo "Waiting for application rollback... attempt $i/10"
+                                        sleep 3
+                                    fi
+                                done
+                                exit 1
+                            ''')
+                            if (rollbackStatus != 0) {
+                                echo 'Rollback did not restore the application; the release remains failed.'
+                            }
+                        }
+                    } catch (ignored) {
+                        echo '========================================'
+                        echo 'AUTOMATIC ROLLBACK FAILED'
+                        echo '========================================'
+                        echo 'Rollback handler could not start.'
+                        sh(returnStatus: true, script: '''
+                            docker ps -a
+                            docker logs --tail 100 recruitment-backend || true
+                            docker logs --tail 100 recruitment-frontend || true
+                        ''')
+                    }
+                } else {
+                    echo 'Deployment was not attempted; rollback is not needed.'
+                }
+            }
         }
     }
 }

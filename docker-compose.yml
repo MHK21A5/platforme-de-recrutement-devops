@@ -83,6 +83,15 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # Email stays disabled until Jenkins supplies credentials and SMTP settings.
+      GF_SMTP_ENABLED: ${GF_SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${GF_SMTP_HOST:-}
+      GF_SMTP_USER: ${GF_SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${GF_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${GF_SMTP_FROM_ADDRESS:-}
+      GF_SMTP_FROM_NAME: ${GF_SMTP_FROM_NAME:-Recruitment Platform Alerts}
+      GF_SMTP_STARTTLS_POLICY: MandatoryStartTLS
+      GF_ALERT_EMAIL: ${GF_ALERT_EMAIL:-alerts@example.invalid}
     depends_on:
       - prometheus
       - loki

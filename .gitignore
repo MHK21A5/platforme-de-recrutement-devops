@@ -29,6 +29,8 @@ yarn-error.log*
 # Temporary files
 *.tmp
 *.temp
+.deployment-attempted
+.rollback-ready
 
 # Runtime uploads
 backend/uploads/*
