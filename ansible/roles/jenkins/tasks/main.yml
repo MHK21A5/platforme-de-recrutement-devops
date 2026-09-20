@@ -1,0 +1,67 @@
+---
+- name: Install Java and Jenkins prerequisites
+  ansible.builtin.apt:
+    name:
+      - openjdk-21-jdk
+      - curl
+      - gnupg
+      - ca-certificates
+    state: present
+    update_cache: true
+
+- name: Ensure APT keyring directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Jenkins 2026 repository key
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+    dest: /etc/apt/keyrings/jenkins-keyring.asc
+    mode: '0644'
+
+- name: Configure Jenkins repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/
+    mode: '0644'
+
+- name: Install Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+    update_cache: true
+
+- name: Ensure Jenkins service is enabled and running
+  ansible.builtin.service:
+    name: jenkins
+    state: started
+    enabled: true
+
+- name: Add Jenkins user to docker group
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: true
+
+- name: Check Java version
+  ansible.builtin.command:
+    cmd: java -version
+  register: java_version
+  changed_when: false
+
+- name: Show Java version
+  ansible.builtin.debug:
+    var: java_version.stderr
+
+- name: Check Jenkins service status
+  ansible.builtin.command:
+    cmd: systemctl is-active jenkins
+  register: jenkins_status
+  changed_when: false
+
+- name: Show Jenkins status
+  ansible.builtin.debug:
+    var: jenkins_status.stdout

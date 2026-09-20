@@ -1,0 +1,10 @@
+---
+- name: Configure recruitment platform server
+  hosts: recruitment_servers
+  become: true
+
+  roles:
+    - common
+    - docker
+    - jenkins
+    - monitoring

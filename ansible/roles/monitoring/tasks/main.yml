@@ -1,0 +1,63 @@
+---
+- name: Ensure monitoring base directory exists
+  ansible.builtin.file:
+    path: /opt/recruitment-monitoring
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    mode: '0755'
+
+- name: Check Prometheus container
+  ansible.builtin.command:
+    cmd: docker inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' recruitment-prometheus
+  register: prometheus_running
+  changed_when: false
+  failed_when: false
+
+- name: Check Grafana container
+  ansible.builtin.command:
+    cmd: docker inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' recruitment-grafana
+  register: grafana_running
+  changed_when: false
+  failed_when: false
+
+- name: Check Loki container
+  ansible.builtin.command:
+    cmd: docker inspect -f '{{ "{{" }}.State.Running{{ "}}" }}' recruitment-loki
+  register: loki_running
+  changed_when: false
+  failed_when: false
+
+- name: Check Prometheus health endpoint
+  ansible.builtin.uri:
+    url: http://localhost:9090/-/healthy
+    method: GET
+    status_code: 200
+  register: prometheus_health
+  failed_when: false
+
+- name: Check Grafana health endpoint
+  ansible.builtin.uri:
+    url: http://localhost:3000/api/health
+    method: GET
+    status_code: 200
+  register: grafana_health
+  failed_when: false
+
+- name: Check Loki readiness endpoint
+  ansible.builtin.uri:
+    url: http://localhost:3100/ready
+    method: GET
+    status_code: 200
+  register: loki_health
+  failed_when: false
+
+- name: Show monitoring status
+  ansible.builtin.debug:
+    msg:
+      - "Prometheus container running: {{ prometheus_running.stdout | default('unknown') }}"
+      - "Grafana container running: {{ grafana_running.stdout | default('unknown') }}"
+      - "Loki container running: {{ loki_running.stdout | default('unknown') }}"
+      - "Prometheus HTTP status: {{ prometheus_health.status | default('unknown') }}"
+      - "Grafana HTTP status: {{ grafana_health.status | default('unknown') }}"
+      - "Loki HTTP status: {{ loki_health.status | default('unknown') }}"

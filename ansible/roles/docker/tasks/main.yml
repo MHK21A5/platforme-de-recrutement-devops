@@ -1,0 +1,47 @@
+---
+- name: Install Docker packages
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose
+    state: present
+    update_cache: true
+
+- name: Ensure Docker service is enabled and running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add current Ansible user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: true
+
+- name: Add Jenkins user to docker group if Jenkins exists
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: true
+  failed_when: false
+
+- name: Check Docker version
+  ansible.builtin.command:
+    cmd: docker --version
+  register: docker_version
+  changed_when: false
+
+- name: Show Docker version
+  ansible.builtin.debug:
+    var: docker_version.stdout
+
+- name: Check Docker Compose version
+  ansible.builtin.command:
+    cmd: docker-compose --version
+  register: compose_version
+  changed_when: false
+
+- name: Show Docker Compose version
+  ansible.builtin.debug:
+    var: compose_version.stdout
