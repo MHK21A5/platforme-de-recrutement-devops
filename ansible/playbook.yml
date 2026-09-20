@@ -1,10 +1,16 @@
 ---
-- name: Configure recruitment platform server
+- name: Configure recruitment servers
   hosts: recruitment_servers
   become: true
 
   roles:
     - common
     - docker
+
+- name: Configure CI and monitoring servers
+  hosts: ci_monitoring_servers
+  become: true
+
+  roles:
     - jenkins
     - monitoring
