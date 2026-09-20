@@ -15,7 +15,7 @@
 
 - name: Add current Ansible user to docker group
   ansible.builtin.user:
-    name: "{{ ansible_user_id }}"
+    name: "{{ ansible_user | default(ansible_env.SUDO_USER | default(ansible_user_id)) }}"
     groups: docker
     append: true
 
