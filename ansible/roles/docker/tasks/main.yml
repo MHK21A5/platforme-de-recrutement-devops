@@ -19,13 +19,6 @@
     groups: docker
     append: true
 
-- name: Add Jenkins user to docker group if Jenkins exists
-  ansible.builtin.user:
-    name: jenkins
-    groups: docker
-    append: true
-  failed_when: false
-
 - name: Check Docker version
   ansible.builtin.command:
     cmd: docker --version
