@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         GRAFANA_EMAIL_ENABLED = 'true'
-        GF_SMTP_HOST = 'smtp.office365.com:587'
-        GF_SMTP_FROM_ADDRESS = 'MohamedelHabib.Khamouma@esprit.tn'
+        GF_SMTP_HOST = 'smtp.gmail.com:587'
+        GF_SMTP_FROM_ADDRESS = 'khamoumahabib586@gmail.com'
     }
 
     stages {
