@@ -420,6 +420,89 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy Backup Recovery Server') {
+            steps {
+                withCredentials([
+                    file(credentialsId: 'backend-env-file', variable: 'BACKEND_ENV_FILE')
+                ]) {
+                    sh '''#!/usr/bin/env bash
+                        set +x
+                        set -euo pipefail
+                        trap 'echo "BACKUP DEPLOYMENT FAILED; primary deployment was not changed" >&2' ERR
+
+                        BACKUP_HOST=192.168.33.11
+                        BACKUP_USER=vagrant
+                        BACKUP_SSH_KEY=/var/lib/jenkins/.ssh/backup_deploy
+                        BACKUP_DIR=/home/vagrant/recruitment-backup
+
+                        backup_ssh() {
+                            ssh -i "$BACKUP_SSH_KEY" -o StrictHostKeyChecking=yes \
+                                -o BatchMode=yes -o IdentitiesOnly=yes \
+                                "$BACKUP_USER@$BACKUP_HOST" "$@"
+                        }
+                        cleanup_env() {
+                            if ! backup_ssh "rm -f '$BACKUP_DIR/backend.env'"; then
+                                echo 'WARNING: Could not remove temporary backend.env from backup server' >&2
+                            fi
+                        }
+
+                        backup_ssh "mkdir -p '$BACKUP_DIR'"
+                        scp -i "$BACKUP_SSH_KEY" -o StrictHostKeyChecking=yes \
+                            -o BatchMode=yes -o IdentitiesOnly=yes \
+                            docker-compose.backup.yml \
+                            "$BACKUP_USER@$BACKUP_HOST:$BACKUP_DIR/docker-compose.backup.yml"
+
+                        docker save recruitment-backend:latest | backup_ssh 'docker load'
+                        docker save recruitment-frontend:latest | backup_ssh 'docker load'
+
+                        trap cleanup_env EXIT
+                        backup_ssh "umask 077; cat > '$BACKUP_DIR/backend.env' && chmod 600 '$BACKUP_DIR/backend.env'" < "$BACKEND_ENV_FILE"
+
+                        backup_ssh "BACKUP_DIR='$BACKUP_DIR' bash -se" <<'DEPLOY_BACKUP'
+                            set -e
+                            cd "$BACKUP_DIR"
+                            app_containers="$(docker-compose -f docker-compose.backup.yml ps -q backend frontend)"
+                            for container_id in $app_containers; do
+                                docker rm -f "$container_id"
+                            done
+                            for container in recruitment-backend-backup recruitment-frontend-backup; do
+                                if docker container inspect "$container" > /dev/null 2>&1; then
+                                    docker rm -f "$container"
+                                fi
+                            done
+                            docker-compose -f docker-compose.backup.yml up -d
+DEPLOY_BACKUP
+
+                        backup_ssh "rm -f '$BACKUP_DIR/backend.env'"
+                        trap - EXIT
+
+                        backup_ssh 'bash -se' <<'VERIFY_BACKUP'
+                            set -e
+                            for i in $(seq 1 10); do
+                                backend_running="$(docker inspect -f '{{.State.Running}}' recruitment-backend-backup 2>/dev/null || true)"
+                                frontend_running="$(docker inspect -f '{{.State.Running}}' recruitment-frontend-backup 2>/dev/null || true)"
+                                backend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-backend-backup 2>/dev/null || true)"
+                                frontend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-frontend-backup 2>/dev/null || true)"
+                                if [ "$backend_running" = 'true' ] && [ "$frontend_running" = 'true' ] &&
+                                   [ "$backend_health" = 'healthy' ] && [ "$frontend_health" = 'healthy' ] &&
+                                   curl --fail --silent http://127.0.0.1:5000/health > /dev/null &&
+                                   curl --fail --silent http://127.0.0.1:8081/ > /dev/null; then
+                                    echo 'Backup backend and frontend are running, healthy, and reachable'
+                                    exit 0
+                                fi
+                                if [ "$i" -lt 10 ]; then
+                                    echo "Waiting for backup deployment... attempt $i/10"
+                                    sleep 3
+                                fi
+                            done
+                            echo "Backup deployment failed: backend running=$backend_running health=$backend_health; frontend running=$frontend_running health=$frontend_health" >&2
+                            exit 1
+VERIFY_BACKUP
+                    '''
+                }
+            }
+        }
     }
 
     post {
