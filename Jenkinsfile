@@ -137,18 +137,29 @@ pipeline {
                                     touch .rollback-ready
                                 fi
 
-                                # Keep monitoring running while replacing the application.
+                                # Compose 1.29.2 cannot recreate these newer Docker images.
+                                # Remove only application containers before creating replacements.
                                 touch .deployment-attempted
+                                app_containers="$(docker-compose ps -q backend frontend)"
+                                for container_id in $app_containers; do
+                                    docker rm -f "$container_id"
+                                done
                                 for container in recruitment-backend recruitment-frontend; do
                                     if docker container inspect "$container" > /dev/null 2>&1; then
-                                        if [ "$(docker inspect -f '{{if index .Config.Labels "com.docker.compose.project"}}managed{{else}}legacy{{end}}' "$container")" = 'legacy' ]; then
-                                            docker rm -f "$container"
-                                        fi
+                                        docker rm -f "$container"
                                     fi
                                 done
 
-                                docker-compose up -d --no-deps --force-recreate backend frontend
-                                docker-compose up -d
+                                docker-compose up -d --no-deps backend frontend
+                                docker-compose up -d --no-recreate
+                                if [ "$GF_SMTP_ENABLED" = 'true' ]; then
+                                    # A fresh Grafana container picks up the injected SMTP settings.
+                                    grafana_containers="$(docker-compose ps -q grafana)"
+                                    for container_id in $grafana_containers; do
+                                        docker rm -f "$container_id"
+                                    done
+                                    docker-compose up -d --no-deps grafana
+                                fi
                             '''
                         }
                     }
@@ -449,7 +460,16 @@ pipeline {
 
                                 docker tag recruitment-backend:rollback recruitment-backend:latest
                                 docker tag recruitment-frontend:rollback recruitment-frontend:latest
-                                docker-compose up -d --no-deps --force-recreate backend frontend
+                                app_containers="$(docker-compose ps -q backend frontend)"
+                                for container_id in $app_containers; do
+                                    docker rm -f "$container_id"
+                                done
+                                for container in recruitment-backend recruitment-frontend; do
+                                    if docker container inspect "$container" > /dev/null 2>&1; then
+                                        docker rm -f "$container"
+                                    fi
+                                done
+                                docker-compose up -d --no-deps backend frontend
 
                                 for i in $(seq 1 10); do
                                     backend_running="$(docker inspect -f '{{.State.Running}}' recruitment-backend 2>/dev/null || true)"
