@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        GRAFANA_EMAIL_ENABLED = 'true'
+        GF_SMTP_HOST = 'smtp.office365.com:587'
+        GF_SMTP_FROM_ADDRESS = 'MohamedelHabib.Khamouma@esprit.tn'
+    }
+
     stages {
 
         stage('Checkout') {
