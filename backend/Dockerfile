@@ -10,4 +10,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+CMD ["sh", "-c", "echo 'CONTROLLED ROLLBACK TEST - backend intentionally failing' && exit 1"]
