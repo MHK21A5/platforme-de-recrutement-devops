@@ -16,7 +16,7 @@ export function createSocketStore() {
     },
     connect(token) {
       if (!token) return;
-      const connection = io("http://localhost:5000", {
+      const connection = io(window.location.origin, {
         auth: { token },
         transports: ["websocket", "polling"],
         upgrade: true,

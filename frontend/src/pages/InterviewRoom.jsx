@@ -24,8 +24,7 @@ import {
   PhoneOffIcon,
 } from "../components/icons";
 
-const SOCKET_URL = "http://localhost:5000";
-const LOGO_URL   = "http://localhost:5000/uploads/logo.png";
+const LOGO_URL   = "/uploads/logo.png";
 const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -760,7 +759,7 @@ const stopVoiceActivity = () => {
   useEffect(() => {
     if (!token) return;
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(window.location.origin, {
       auth: { token },
       transports: ["websocket", "polling"],
       upgrade: true,
@@ -1615,7 +1614,7 @@ const stopVoiceActivity = () => {
                   <div>
                     <div style={S.detailLabel}>CV</div>
                     {candidate.cv
-                      ? <a href={`http://localhost:5000${candidate.cv}`} target="_blank" rel="noreferrer" style={{ color:"var(--brand)", fontWeight:600, textDecoration:"none" }}>View / Download CV</a>
+                      ? <a href={candidate.cv} target="_blank" rel="noreferrer" style={{ color:"var(--brand)", fontWeight:600, textDecoration:"none" }}>View / Download CV</a>
                       : <div style={S.detailValue}>No CV uploaded</div>}
                   </div>
                   {cvInfo?.linkedIn && (

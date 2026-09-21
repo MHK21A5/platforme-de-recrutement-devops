@@ -23,7 +23,11 @@ const googleAuthRoutes = require("./routes/googleAuthRoutes");
 
 
 const cors = require("cors");
-const allowedOrigins = ["http://localhost:5173", "http://localhost:8081"];
+const allowedOrigins = [...new Set([
+  "http://localhost:5173",
+  "http://localhost:8081",
+  process.env.FRONTEND_URL?.trim(),
+].filter(Boolean))];
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {

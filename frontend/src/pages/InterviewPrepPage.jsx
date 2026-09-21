@@ -14,8 +14,6 @@ import {
   CheckCircleIcon,
 } from "../components/icons";
 
-const BASE_URL = "http://localhost:5000";
-
 function formatDate(d) {
   if (!d) return "—";
   const date = new Date(d);

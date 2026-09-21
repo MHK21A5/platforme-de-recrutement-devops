@@ -60,10 +60,8 @@ function formatDate(d) {
   });
 }
 
-const BASE_URL = "http://localhost:5000";
-
 function UserAvatar({ user, size = 28 }) {
-  const imageUrl = user?.profileImage ? `${BASE_URL}${user.profileImage}` : null;
+  const imageUrl = user?.profileImage || null;
 
   if (imageUrl) {
     return (

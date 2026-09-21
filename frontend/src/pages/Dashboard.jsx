@@ -41,7 +41,7 @@ import {
   SearchIcon,
 } from "../components/icons";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "";
 
 function statusVariant(status) {
   if (status === "finished") return "success";

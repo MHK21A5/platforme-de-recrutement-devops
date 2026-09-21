@@ -4,8 +4,7 @@ import { Button } from "./ui/Button";
 import { LogOutIcon, SettingsIcon } from "./icons";
 import { NotificationBell } from "./NotificationBell";
 
-const LOGO_URL = "http://localhost:5000/uploads/logo.png";
-const BASE_URL = "http://localhost:5000";
+const LOGO_URL = "/uploads/logo.png";
 
 function SunIcon() {
   return (
@@ -36,9 +35,7 @@ function roleLabel(role) {
 }
 
 export function Avatar({ name, profileImage, size = 32, style = {}, className = "" }) {
-  const imgSrc = profileImage
-    ? profileImage.startsWith("http") ? profileImage : `${BASE_URL}${profileImage}`
-    : null;
+  const imgSrc = profileImage || null;
 
   const base = {
     width: size, height: size, borderRadius: "9999px",

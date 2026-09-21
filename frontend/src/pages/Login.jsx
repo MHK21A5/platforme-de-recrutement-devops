@@ -14,7 +14,7 @@ import {
   AlertTriangleIcon,
 } from "../components/icons";
 
-const LOGO_URL = "http://localhost:5000/uploads/logo.png";
+const LOGO_URL = "/uploads/logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
