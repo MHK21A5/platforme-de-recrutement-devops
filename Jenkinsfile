@@ -556,8 +556,8 @@ VERIFY_BACKUP
                             docker-compose.azure.yml \\
                             "$AZURE_USER@$AZURE_HOST:$AZURE_DIR/docker-compose.azure.yml"
 
-                        docker save recruitment-backend:latest | azure_ssh 'docker load'
-                        docker save recruitment-frontend:latest | azure_ssh 'docker load'
+                        docker save recruitment-backend:latest | gzip -1 | azure_ssh 'gunzip | docker load'
+                        docker save recruitment-frontend:latest | gzip -1 | azure_ssh 'gunzip | docker load'
 
                         azure_ssh "umask 077; cat > '$AZURE_DIR/backend.env' && chmod 600 '$AZURE_DIR/backend.env'" < "$AZURE_ENV_FILE"
 
