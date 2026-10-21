@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
-import { TiltCard } from "../components/TiltCard";
+import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Label } from "../components/ui/Label";
 import { Alert } from "../components/ui/Alert";
 import {
-  BriefcaseIcon,
   MailIcon,
   LockIcon,
   UserIcon,
@@ -55,28 +54,42 @@ export default function Register() {
     <div className="auth-shell">
       <aside className="auth-aside">
         <div className="auth-brand">
-          <TiltCard maxTilt={12} style={{ borderRadius: 8 }}>
-            <span className="auth-brand-mark">
-              <BriefcaseIcon size={16} />
-            </span>
-          </TiltCard>
-          <span>STB Recruitment</span>
+          <BrandMark size={38} />
+          <span className="auth-brand-copy">
+            <strong>Recruitment App</strong>
+            <small>Modern hiring workspace</small>
+          </span>
         </div>
 
-        <div className="auth-quote">
-          <blockquote>
-            "Join thousands of candidates landing their dream roles through
-            structured, fair interviews."
-          </blockquote>
-          <cite>— The STB Recruit team</cite>
+        <div className="auth-showcase">
+          <span className="auth-kicker">Your next opportunity starts here</span>
+          <h2>A candidate experience designed around clarity.</h2>
+          <p>
+            Create one profile, prepare with confidence, and keep every interview step organized.
+          </p>
+          <div className="auth-feature-list">
+            <div><span>01</span><strong>A simple candidate profile</strong></div>
+            <div><span>02</span><strong>Clear interview schedules</strong></div>
+            <div><span>03</span><strong>Focused preparation tools</strong></div>
+          </div>
+        </div>
+
+        <div className="auth-trust-line">
+          <span className="auth-status-dot" />
+          A professional space for every step of your application
         </div>
       </aside>
 
       <section className="auth-main">
         <div className="auth-card">
+          <div className="auth-mobile-brand">
+            <BrandMark size={36} />
+            <strong>Recruitment App</strong>
+          </div>
           <div className="auth-heading">
+            <span className="auth-eyebrow">Candidate access</span>
             <h1>Create your account</h1>
-            <p>Sign up as a candidate — it takes less than a minute.</p>
+            <p>Set up your candidate profile in less than a minute.</p>
           </div>
 
           {error && (
@@ -162,7 +175,7 @@ export default function Register() {
             </Button>
           </form>
 
-          <p className="text-sm muted" style={{ textAlign: "center" }}>
+          <p className="auth-form-footer">
             Already have an account?{" "}
             <Link to="/login" style={{ fontWeight: 500 }}>
               Sign in

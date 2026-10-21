@@ -51,10 +51,10 @@ function SkillPill({ skill, highlighted }) {
         fontSize: "0.8125rem",
         fontWeight: 500,
         background: highlighted
-          ? "rgba(0,129,198,0.12)"
+          ? "rgba(214,174,63,0.12)"
           : "var(--muted)",
         color: highlighted ? "var(--brand)" : "var(--foreground)",
-        border: `1px solid ${highlighted ? "rgba(0,129,198,0.35)" : "var(--border)"}`,
+        border: `1px solid ${highlighted ? "rgba(214,174,63,0.35)" : "var(--border)"}`,
         transition: "background 120ms",
       }}
     >
@@ -104,10 +104,10 @@ function PrepCard({ interview, onJoin }) {
           height: 4,
           background:
             interview.status === "ongoing"
-              ? "linear-gradient(90deg,#2563eb,#0081C6)"
+              ? "linear-gradient(90deg,#D6AE3F,#F0D276)"
               : interview.status === "finished"
               ? "linear-gradient(90deg,#16a34a,#22c55e)"
-              : "linear-gradient(90deg,#0081C6,#38bdf8)",
+              : "linear-gradient(90deg,#B88724,#E5C158)",
         }}
       />
 
@@ -274,7 +274,7 @@ function PrepCard({ interview, onJoin }) {
           <div
             style={{
               borderRadius: "calc(var(--radius) - 2px)",
-              border: "1px solid rgba(0,129,198,0.25)",
+              border: "1px solid rgba(214,174,63,0.25)",
               overflow: "hidden",
             }}
           >
@@ -285,8 +285,8 @@ function PrepCard({ interview, onJoin }) {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "0.75rem 1rem",
-                background: "rgba(0,129,198,0.07)",
-                borderBottom: tips || tipsLoading ? "1px solid rgba(0,129,198,0.15)" : "none",
+                background: "rgba(214,174,63,0.07)",
+                borderBottom: tips || tipsLoading ? "1px solid rgba(214,174,63,0.15)" : "none",
               }}
             >
               <strong style={{ color: "var(--brand)", fontSize: "0.875rem" }}>
@@ -297,7 +297,7 @@ function PrepCard({ interview, onJoin }) {
                 size="sm"
                 onClick={fetchTips}
                 disabled={tipsLoading}
-                style={{ fontSize: "0.75rem", borderColor: "rgba(0,129,198,0.35)", color: "var(--brand)" }}
+                style={{ fontSize: "0.75rem", borderColor: "rgba(214,174,63,0.35)", color: "var(--brand)" }}
               >
                 {tipsLoading ? "Generating…" : tips ? "Regenerate" : "Generate with AI"}
               </Button>

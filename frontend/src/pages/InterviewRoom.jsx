@@ -6,6 +6,7 @@ import api from "../services/api";
 import { useToast } from "../context/useToast";
 import { TiltCard } from "../components/TiltCard";
 import { Avatar } from "../components/AppShell";
+import { BrandMark } from "../components/BrandMark";
 import { Badge } from "../components/ui/Badge";
 import {
   ArrowLeftIcon,
@@ -24,7 +25,6 @@ import {
   PhoneOffIcon,
 } from "../components/icons";
 
-const LOGO_URL   = "/uploads/logo.png";
 const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -85,7 +85,6 @@ const S = {
     display:"flex", alignItems:"center", gap:"12px",
     position:"sticky", top:0, zIndex:20,
   },
-  logo: { width:28, height:28, objectFit:"contain" },
   topbarTitle: { fontWeight:600, fontSize:"0.9375rem", color:"var(--fg)", flex:1, minWidth:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" },
   topbarRight: { display:"flex", alignItems:"center", gap:"8px", flexShrink:0 },
   backBtn: {
@@ -120,7 +119,7 @@ const S = {
     borderRadius:"var(--radius-lg)", border:"2px dashed var(--border)",
     background:"rgba(255,255,255,0.02)", textAlign:"center", minHeight:180,
   },
-  futureIcon: { width:48, height:48, borderRadius:"50%", background:"linear-gradient(135deg,var(--brand),#60a5fa)", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" },
+  futureIcon: { width:48, height:48, borderRadius:"50%", background:"linear-gradient(135deg,var(--brand),var(--accent))", display:"flex", alignItems:"center", justifyContent:"center", color:"#17120A" },
   futureTitle: { fontWeight:600, fontSize:"0.9rem", color:"var(--fg)" },
   futureSubtitle: { fontSize:"0.8125rem", color:"var(--fg-muted)", maxWidth:280 },
   chatPanel: (open) => ({
@@ -150,10 +149,10 @@ const S = {
     border: "none",
     borderRadius: open ? "6px 0 0 6px" : "0 6px 6px 0",
     cursor: "pointer",
-    color: "#fff",
+    color: "#17120A",
     fontSize: "0.65rem",
     fontWeight: 700,
-    boxShadow: open ? "-2px 0 10px rgba(59,130,246,0.3)" : "2px 0 10px rgba(59,130,246,0.3)",
+    boxShadow: open ? "-2px 0 10px rgba(214,174,63,0.22)" : "2px 0 10px rgba(214,174,63,0.22)",
     transition: "right 220ms ease",
     padding: 0,
   }),
@@ -165,12 +164,12 @@ const S = {
     maxWidth:"85%", padding:"8px 12px",
     borderRadius: m?"14px 14px 3px 14px":"14px 14px 14px 3px",
     background: m?"var(--brand)":"var(--bg-card)",
-    color: m?"#fff":"var(--fg)", fontSize:"0.875rem", lineHeight:1.5,
-    boxShadow: m?"0 2px 8px rgba(59,130,246,0.25)":"var(--shadow-xs)", wordBreak:"break-word",
+    color: m?"#17120A":"var(--fg)", fontSize:"0.875rem", lineHeight:1.5,
+    boxShadow: m?"0 2px 8px rgba(214,174,63,0.2)":"var(--shadow-xs)", wordBreak:"break-word",
     border: m?"none":"1px solid var(--border)",
   }),
-  msgMeta: (m) => ({ fontSize:"0.68rem", color: m?"rgba(255,255,255,0.65)":"var(--fg-subtle)", marginTop:"3px", textAlign: m?"right":"left" }),
-  msgSenderName: (m) => ({ fontSize:"0.68rem", fontWeight:600, color: m?"rgba(255,255,255,0.8)":"var(--fg-muted)", marginBottom:"2px" }),
+  msgMeta: (m) => ({ fontSize:"0.68rem", color: m?"rgba(23,18,10,0.68)":"var(--fg-subtle)", marginTop:"3px", textAlign: m?"right":"left" }),
+  msgSenderName: (m) => ({ fontSize:"0.68rem", fontWeight:600, color: m?"rgba(23,18,10,0.82)":"var(--fg-muted)", marginBottom:"2px" }),
   sysMsg: { textAlign:"center", fontSize:"0.72rem", color:"var(--fg-subtle)", padding:"4px 0", fontStyle:"italic" },
   chatInputBar: { borderTop:"1px solid var(--border)", padding:"10px 12px", display:"flex", gap:"8px", alignItems:"flex-end", background:"var(--bg-surface)", flexShrink:0 },
   chatTextarea: {
@@ -186,8 +185,8 @@ const S = {
     background: d?"var(--bg-input)":"var(--brand)",
     border: d?"1px solid var(--border)":"none",
     cursor: d?"not-allowed":"pointer",
-    color: d?"var(--fg-subtle)":"#fff", flexShrink:0, transition:"all 140ms",
-    boxShadow: d?"none":"0 2px 8px rgba(59,130,246,0.3)",
+    color: d?"var(--fg-subtle)":"#17120A", flexShrink:0, transition:"all 140ms",
+    boxShadow: d?"none":"0 2px 8px rgba(214,174,63,0.22)",
   }),
   videoArea: { position:"relative", background:"#0a0a0f", aspectRatio:"16/9", overflow:"hidden", minHeight:180 },
   remoteVideo: { width:"100%", height:"100%", objectFit:"cover", display:"block" },
@@ -209,8 +208,8 @@ const S = {
       ? "linear-gradient(135deg,#16a34a,#22c55e)"
       : color==="red"
       ? "linear-gradient(135deg,#dc2626,#ef4444)"
-      : "linear-gradient(135deg,#114592,#0081C6)",
-    color:"#fff", transition:"opacity 120ms",
+      : "linear-gradient(135deg,#B88724,#D6AE3F)",
+    color:color === "green" || color === "red" ? "#fff" : "#17120A", transition:"opacity 120ms",
   }),
   reportCard: {
     padding:"16px", borderRadius:"var(--radius-lg)", border:"1px solid var(--border)",
@@ -321,7 +320,7 @@ export default function InterviewRoom() {
             <span style={{ padding:"0.35rem 0.75rem", borderRadius:999, background:quizResultPass ? "var(--success-dim)" : "var(--danger-dim)", color:quizResultPass ? "var(--success)" : "var(--danger)", fontWeight:700, border:`1px solid ${quizResultPass ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}` }}>
               {quizResultPass ? "Passed" : "Needs review"}
             </span>
-            <span style={{ padding:"0.35rem 0.75rem", borderRadius:999, background:"var(--brand-dim)", color:"var(--brand)", fontWeight:700, border:"1px solid rgba(59,130,246,0.3)" }}>
+            <span style={{ padding:"0.35rem 0.75rem", borderRadius:999, background:"var(--brand-dim)", color:"var(--brand)", fontWeight:700, border:"1px solid rgba(214,174,63,0.3)" }}>
               {quizResultScore}% score
             </span>
           </div>
@@ -1117,7 +1116,7 @@ const stopVoiceActivity = () => {
         <button style={S.backBtn} onClick={() => navigate("/dashboard")}>
           <ArrowLeftIcon size={14} /> Dashboard
         </button>
-        <img src={LOGO_URL} alt="logo" style={S.logo} />
+        <BrandMark size={30} />
         <span style={S.topbarTitle}>{interview?.title || "Interview Room"}</span>
         <div style={S.topbarRight}>
           <span style={{
@@ -1188,7 +1187,7 @@ const stopVoiceActivity = () => {
               )}
 
               {!quizLoading && quizActionMessage && (
-                <div style={{ color:"#114592", marginBottom:"1rem", fontSize:"0.95rem" }}>
+                <div style={{ color:"#B88724", marginBottom:"1rem", fontSize:"0.95rem" }}>
                   {quizActionMessage}
                 </div>
               )}
@@ -1269,7 +1268,7 @@ const stopVoiceActivity = () => {
                       )}
                     </div>
 
-                    <div style={{ padding:"0.75rem", borderRadius:"calc(var(--radius) - 2px)", background:"rgba(17,69,146,0.06)", border:"1px solid rgba(0,129,198,0.2)", fontSize:"0.82rem", color:"var(--muted-foreground)", lineHeight:1.6 }}>
+                    <div style={{ padding:"0.75rem", borderRadius:"calc(var(--radius) - 2px)", background:"rgba(184,135,36,0.06)", border:"1px solid rgba(214,174,63,0.2)", fontSize:"0.82rem", color:"var(--muted-foreground)", lineHeight:1.6 }}>
                       💡 The quiz will test your knowledge of the skills listed above. Take a moment to review them before it starts.
                     </div>
                   </div>
@@ -1402,8 +1401,8 @@ const stopVoiceActivity = () => {
                                 textAlign:"left",
                                 padding:"0.85rem 1rem",
                                 borderRadius:"calc(var(--radius) - 2px)",
-                                border:`1px solid ${selected ? "#114592" : "var(--border)"}`,
-                                background: selected ? "rgba(17,69,146,0.1)" : "var(--background)",
+                                border:`1px solid ${selected ? "#B88724" : "var(--border)"}`,
+                                background: selected ? "rgba(184,135,36,0.1)" : "var(--background)",
                                 color:"var(--foreground)",
                                 cursor:"pointer",
                               }}
@@ -1475,8 +1474,8 @@ const stopVoiceActivity = () => {
             {callState === "calling" && (
               <div style={{ padding:"1.25rem", display:"flex", flexDirection:"column", alignItems:"center", gap:"1rem" }}>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.5rem" }}>
-                  <div style={{ width:56, height:56, borderRadius:"50%", background:"linear-gradient(135deg,#114592,#0081C6)", display:"flex", alignItems:"center", justifyContent:"center", animation:"pulse-blue 1.5s infinite" }}>
-                    <PhoneIcon size={22} style={{ color:"#fff" }} />
+                  <div style={{ width:56, height:56, borderRadius:"50%", background:"linear-gradient(135deg,#B88724,#D6AE3F)", display:"flex", alignItems:"center", justifyContent:"center", animation:"pulse-blue 1.5s infinite" }}>
+                    <PhoneIcon size={22} style={{ color:"#17120A" }} />
                   </div>
                   <div style={{ fontWeight:600, color:"var(--foreground)" }}>Calling…</div>
                   <div style={{ fontSize:"0.8125rem", color:"var(--muted-foreground)" }}>Waiting for the other participant to answer</div>
@@ -1563,7 +1562,7 @@ const stopVoiceActivity = () => {
 
                   {/* Screen sharing badge */}
                   {isScreenSharing && (
-                    <div style={{ position:"absolute", top:10, left:10, background:"rgba(17,69,146,0.85)", color:"#fff", borderRadius:6, padding:"0.25rem 0.6rem", fontSize:"0.72rem", fontWeight:600, display:"flex", alignItems:"center", gap:"0.35rem" }}>
+                    <div style={{ position:"absolute", top:10, left:10, background:"rgba(214,174,63,0.9)", color:"#17120A", borderRadius:6, padding:"0.25rem 0.6rem", fontSize:"0.72rem", fontWeight:600, display:"flex", alignItems:"center", gap:"0.35rem" }}>
                       <MonitorIcon size={12} /> Screen sharing
                     </div>
                   )}
@@ -1645,7 +1644,7 @@ const stopVoiceActivity = () => {
                     <div style={S.detailLabel}>Skills</div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:"0.375rem", marginTop:"0.375rem" }}>
                       {cvInfo.skills.map((s, i) => (
-                        <span key={i} style={{ padding:"0.2rem 0.6rem", borderRadius:"9999px", fontSize:"0.75rem", fontWeight:500, background:"linear-gradient(135deg,#114592,#0081C6)", color:"#fff" }}>{s}</span>
+                        <span key={i} style={{ padding:"0.2rem 0.6rem", borderRadius:"9999px", fontSize:"0.75rem", fontWeight:600, background:"linear-gradient(135deg,#B88724,#D6AE3F)", color:"#17120A" }}>{s}</span>
                       ))}
                     </div>
                   </div>

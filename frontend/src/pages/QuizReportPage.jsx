@@ -198,7 +198,7 @@ function QuizReport({ id, navigate, initialReport }) {
           <span style={{ ...S.badge, background: passed ? "var(--success-dim)" : "var(--danger-dim)", color: passed ? "var(--success)" : "var(--danger)", border: `1px solid ${passed ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}` }}>
             {passed ? "Passed" : "Needs review"}
           </span>
-          <span style={{ ...S.badge, background: "var(--brand-dim)", color: "var(--brand)", border: "1px solid rgba(59,130,246,0.3)" }}>
+          <span style={{ ...S.badge, background: "var(--brand-dim)", color: "var(--brand)", border: "1px solid rgba(214,174,63,0.3)" }}>
             {score}% score
           </span>
         </div>

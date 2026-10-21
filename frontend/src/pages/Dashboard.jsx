@@ -1200,13 +1200,13 @@ function InterviewCalendar({ interviews, onJoin }) {
                   style={{
                     minHeight:52, padding:"0.3rem", borderRadius:"calc(var(--radius) - 2px)",
                     border:`1px solid ${isSelected ? "var(--brand)" : isToday ? "var(--brand)" : "var(--border)"}`,
-                    background: isSelected ? "rgba(0,129,198,0.1)" : isToday ? "rgba(0,129,198,0.05)" : "var(--card)",
+                    background: isSelected ? "rgba(214,174,63,0.12)" : isToday ? "rgba(214,174,63,0.06)" : "var(--card)",
                     cursor:"pointer", position:"relative",
                   }}
                 >
                   <div style={{ fontSize:"0.78rem", fontWeight: isToday ? 700 : 400, color: isToday ? "var(--brand)" : "var(--foreground)", marginBottom:"0.2rem" }}>{day}</div>
                   {events.slice(0,2).map((e) => (
-                    <div key={e._id} style={{ fontSize:"0.65rem", padding:"0.1rem 0.3rem", borderRadius:3, marginBottom:"0.15rem", background: e.status==="ongoing" ? "rgba(37,99,235,0.2)" : e.status==="finished" ? "rgba(22,163,74,0.15)" : "rgba(245,158,11,0.15)", color: e.status==="ongoing" ? "#2563eb" : e.status==="finished" ? "#16a34a" : "#d97706", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                    <div key={e._id} style={{ fontSize:"0.65rem", padding:"0.1rem 0.3rem", borderRadius:3, marginBottom:"0.15rem", background: e.status==="ongoing" ? "rgba(214,174,63,0.16)" : e.status==="finished" ? "rgba(22,163,74,0.15)" : "rgba(245,158,11,0.15)", color: e.status==="ongoing" ? "#D6AE3F" : e.status==="finished" ? "#16a34a" : "#d97706", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {e.title}
                     </div>
                   ))}

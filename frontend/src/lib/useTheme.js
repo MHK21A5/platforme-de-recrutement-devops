@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "stb-theme";
-
-function getSystemTheme() {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
+const STORAGE_KEY = "recruitment-theme";
 
 function getInitialTheme() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "dark" || stored === "light") return stored;
-  return getSystemTheme();
+  return "dark";
 }
 
 function applyTheme(theme) {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
-import { TiltCard } from "../components/TiltCard";
+import { BrandMark } from "../components/BrandMark";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Label } from "../components/ui/Label";
@@ -13,8 +13,6 @@ import {
   EyeOffIcon,
   AlertTriangleIcon,
 } from "../components/icons";
-
-const LOGO_URL = "/uploads/logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -53,67 +51,44 @@ export default function Login() {
 
   return (
     <div className="auth-shell">
-      {/* Left: brand panel with logo centered */}
       <aside className="auth-aside">
-        {/* Top: brand name */}
         <div className="auth-brand">
-          <img
-            src={LOGO_URL}
-            alt="Logo"
-            style={{ width: 28, height: 28, objectFit: "contain", borderRadius: 6 }}
-          />
-          <span>STB Recruitment</span>
+          <BrandMark size={38} />
+          <span className="auth-brand-copy">
+            <strong>Recruitment App</strong>
+            <small>Modern hiring workspace</small>
+          </span>
         </div>
 
-        {/* Center: big logo */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "1.5rem",
-          }}
-        >
-          <TiltCard maxTilt={8} style={{ transformStyle: "preserve-3d" }}>
-            <img
-              src={LOGO_URL}
-              alt="Recruit Studio"
-              style={{
-                width: 180,
-                height: 180,
-                objectFit: "contain",
-                filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.25))",
-              }}
-            />
-          </TiltCard>
-          <div style={{ textAlign: "center", color: "#fff" }}>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
-             STB Recruitment
-            </div>
-            <div style={{ fontSize: "0.9rem", opacity: 0.8, marginTop: "0.375rem" }}>
-              Smart hiring, made simple.
-            </div>
+        <div className="auth-showcase">
+          <span className="auth-kicker">Talent operations, simplified</span>
+          <h2>Build better teams with a clearer hiring process.</h2>
+          <p>
+            Keep interviews, candidate evaluation, and collaboration in one focused workspace.
+          </p>
+          <div className="auth-feature-list">
+            <div><span>01</span><strong>Structured interviews</strong></div>
+            <div><span>02</span><strong>Shared candidate insights</strong></div>
+            <div><span>03</span><strong>Real-time collaboration</strong></div>
           </div>
         </div>
 
-        {/* Bottom: quote */}
-        <div className="auth-quote">
-          <blockquote>
-            "STB Recruitement cut our time-to-hire in half. Scheduling interviews
-            finally feels effortless."
-          </blockquote>
-          <cite>— Nourhen M., Head of Talent</cite>
+        <div className="auth-trust-line">
+          <span className="auth-status-dot" />
+          Secure, focused, and built for modern recruitment teams
         </div>
       </aside>
 
-      {/* Right: form */}
       <section className="auth-main">
         <div className="auth-card">
+          <div className="auth-mobile-brand">
+            <BrandMark size={36} />
+            <strong>Recruitment App</strong>
+          </div>
           <div className="auth-heading">
+            <span className="auth-eyebrow">Secure workspace</span>
             <h1>Welcome back</h1>
-            <p>Sign in to your account to continue.</p>
+            <p>Sign in to manage interviews, candidates, and hiring activity.</p>
           </div>
 
           {error && (
@@ -187,7 +162,7 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-sm muted" style={{ textAlign: "center" }}>
+          <p className="auth-form-footer">
             Don't have an account?{" "}
             <Link to="/register" style={{ fontWeight: 500 }}>
               Create one
