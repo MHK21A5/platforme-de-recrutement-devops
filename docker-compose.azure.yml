@@ -27,8 +27,6 @@ services:
     image: recruitment-frontend:latest
     container_name: recruitment-frontend-azure
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       - backend
     healthcheck:
@@ -39,3 +37,21 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: recruitment-caddy-azure
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.azure:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:

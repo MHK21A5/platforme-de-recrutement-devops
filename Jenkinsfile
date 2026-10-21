@@ -539,7 +539,7 @@ VERIFY_BACKUP
                             fi
                             if [ "$status" -ne 0 ]; then
                                 echo 'AZURE DEPLOYMENT FAILED; primary and backup deployments were not changed' >&2
-                                azure_ssh 'docker ps -a --filter name=recruitment-backend-azure --filter name=recruitment-frontend-azure; docker logs --tail 100 recruitment-backend-azure 2>&1 || true; docker logs --tail 100 recruitment-frontend-azure 2>&1 || true' || true
+                                azure_ssh 'docker ps -a --filter name=recruitment-backend-azure --filter name=recruitment-frontend-azure --filter name=recruitment-caddy-azure; docker logs --tail 100 recruitment-backend-azure 2>&1 || true; docker logs --tail 100 recruitment-frontend-azure 2>&1 || true; docker logs --tail 100 recruitment-caddy-azure 2>&1 || true' || true
                             fi
                             exit "$status"
                         }
@@ -547,14 +547,14 @@ VERIFY_BACKUP
 
                         # Keep the Jenkins credential unchanged; override only Azure's frontend origin.
                         awk '!/^FRONTEND_URL=/' "$BACKEND_ENV_FILE" > "$AZURE_ENV_FILE"
-                        printf 'FRONTEND_URL=http://158.158.73.218\\n' >> "$AZURE_ENV_FILE"
+                        printf 'FRONTEND_URL=https://mhk-recruitment-cloud.duckdns.org\\n' >> "$AZURE_ENV_FILE"
                         chmod 600 "$AZURE_ENV_FILE"
 
                         azure_ssh "mkdir -p '$AZURE_DIR'"
                         scp -i "$AZURE_SSH_KEY" -o StrictHostKeyChecking=yes \\
                             -o BatchMode=yes -o IdentitiesOnly=yes \\
-                            docker-compose.azure.yml \\
-                            "$AZURE_USER@$AZURE_HOST:$AZURE_DIR/docker-compose.azure.yml"
+                            docker-compose.azure.yml Caddyfile.azure \\
+                            "$AZURE_USER@$AZURE_HOST:$AZURE_DIR/"
 
                         docker save recruitment-backend:latest | gzip -1 | azure_ssh 'gunzip | docker load'
                         docker save recruitment-frontend:latest | gzip -1 | azure_ssh 'gunzip | docker load'
@@ -565,7 +565,7 @@ VERIFY_BACKUP
                             set -e
                             cd "$AZURE_DIR"
                             trap 'rm -f backend.env' EXIT
-                            for container in recruitment-backend-azure recruitment-frontend-azure; do
+                            for container in recruitment-backend-azure recruitment-frontend-azure recruitment-caddy-azure; do
                                 if docker container inspect "$container" > /dev/null 2>&1; then
                                     docker rm -f "$container"
                                 fi
@@ -575,33 +575,52 @@ DEPLOY_AZURE
 
                         azure_ssh 'bash -se' <<'VERIFY_AZURE'
                             set -e
-                            for i in $(seq 1 15); do
+                            for i in $(seq 1 30); do
                                 backend_running="$(docker inspect -f '{{.State.Running}}' recruitment-backend-azure 2>/dev/null || true)"
                                 frontend_running="$(docker inspect -f '{{.State.Running}}' recruitment-frontend-azure 2>/dev/null || true)"
+                                caddy_running="$(docker inspect -f '{{.State.Running}}' recruitment-caddy-azure 2>/dev/null || true)"
                                 backend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-backend-azure 2>/dev/null || true)"
                                 frontend_health="$(docker inspect -f '{{.State.Health.Status}}' recruitment-frontend-azure 2>/dev/null || true)"
-                                if [ "$backend_running" = 'true' ] && [ "$frontend_running" = 'true' ] &&
+
+                                https_ready=false
+                                if curl --fail --silent --show-error \\
+                                   --resolve mhk-recruitment-cloud.duckdns.org:443:127.0.0.1 \\
+                                   https://mhk-recruitment-cloud.duckdns.org/ > /dev/null; then
+                                    https_ready=true
+                                fi
+
+                                redirect_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \\
+                                    --resolve mhk-recruitment-cloud.duckdns.org:80:127.0.0.1 \\
+                                    http://mhk-recruitment-cloud.duckdns.org/ || true)"
+                                redirect_ready=false
+                                case "$redirect_status" in
+                                    301|302|307|308) redirect_ready=true ;;
+                                esac
+
+                                if [ "$backend_running" = 'true' ] && [ "$frontend_running" = 'true' ] && [ "$caddy_running" = 'true' ] &&
                                    [ "$backend_health" = 'healthy' ] && [ "$frontend_health" = 'healthy' ] &&
                                    curl --fail --silent http://127.0.0.1:5000/health > /dev/null &&
-                                   curl --fail --silent http://127.0.0.1/ > /dev/null; then
+                                   [ "$https_ready" = 'true' ] && [ "$redirect_ready" = 'true' ]; then
                                     echo '========================================'
-                                    echo 'AZURE DEPLOYMENT SUCCESS'
+                                    echo 'AZURE HTTPS DEPLOYMENT SUCCESS'
                                     echo '========================================'
-                                    echo 'Host: 158.158.73.218'
+                                    echo 'Domain: mhk-recruitment-cloud.duckdns.org'
                                     echo 'Backend: RUNNING / HEALTHY'
                                     echo 'Frontend: RUNNING / HEALTHY'
+                                    echo 'Caddy: RUNNING'
                                     echo 'Backend health: PASS'
-                                    echo 'Frontend HTTP: PASS'
-                                    echo 'Public URL: http://158.158.73.218'
+                                    echo 'HTTPS: PASS'
+                                    echo 'HTTP -> HTTPS redirect: PASS'
+                                    echo 'Public URL: https://mhk-recruitment-cloud.duckdns.org'
                                     echo '========================================'
                                     exit 0
                                 fi
-                                if [ "$i" -lt 15 ]; then
-                                    echo "Waiting for Azure deployment... attempt $i/15"
+                                if [ "$i" -lt 30 ]; then
+                                    echo "Waiting for Azure HTTPS deployment... attempt $i/30"
                                     sleep 3
                                 fi
                             done
-                            echo "Azure deployment failed: backend running=$backend_running health=$backend_health; frontend running=$frontend_running health=$frontend_health" >&2
+                            echo "Azure deployment failed: backend running=$backend_running health=$backend_health; frontend running=$frontend_running health=$frontend_health; caddy running=$caddy_running; HTTPS=$https_ready; redirect status=${redirect_status:-unavailable}" >&2
                             exit 1
 VERIFY_AZURE
                     '''

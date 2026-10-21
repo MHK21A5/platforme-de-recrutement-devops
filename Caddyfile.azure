@@ -1,0 +1,7 @@
+mhk-recruitment-cloud.duckdns.org {
+    reverse_proxy frontend:80
+}
+
+http://158.158.73.218 {
+    redir https://mhk-recruitment-cloud.duckdns.org{uri} permanent
+}
